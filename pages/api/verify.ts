@@ -197,15 +197,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     
                     // Check if post has rewards enabled and process them
                     if (postData.post_id) {
-                        const { data: postData, error: postError } = await supabase
+                        const { data: postDetails, error: postError } = await supabase
                             .from('posts')
                             .select('reward_enabled, reward_type')
                             .eq('post_id', postData.post_id)
                             .single();
                             
-                        if (!postError && postData?.reward_enabled) {
+                        if (!postError && postDetails?.reward_enabled) {
                             // Process rewards based on reward_type
-                            await processRewards(postData.post_id, postData.user_id, postData.reward_type);
+                            await processRewards(postData.post_id, postData.user_id, postDetails.reward_type);
                         }
                     }
                     

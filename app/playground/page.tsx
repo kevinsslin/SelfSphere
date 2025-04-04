@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import SelfQRcodeWrapper, { SelfApp, SelfAppBuilder } from '@selfxyz/qrcode';
 import { v4 as uuidv4 } from 'uuid';
 import { logo } from '../content/playgroundAppLogo';
 import { countryCodes } from '@selfxyz/core';
-import { ConnectWallet } from '../components/ConnectWallet';
 import NavBar from '../components/NavBar';
 
 export default function PlaygroundPage() {
@@ -93,7 +92,7 @@ export default function PlaygroundPage() {
         }));
     };
 
-    const saveOptionsToServer = async () => {
+    const saveOptionsToServer = useCallback(async () => {
         if (!userId || savingOptions) return;
         
         setSavingOptions(true);
@@ -135,7 +134,7 @@ export default function PlaygroundPage() {
         } finally {
             setSavingOptions(false);
         }
-    };
+    }, [userId, savingOptions, disclosures]);
 
     useEffect(() => {
         const timeoutId = setTimeout(() => {
@@ -145,7 +144,7 @@ export default function PlaygroundPage() {
         }, 500);
 
         return () => clearTimeout(timeoutId);
-    }, [disclosures, userId]);
+    }, [disclosures, userId, saveOptionsToServer]);
 
     if (!userId) return null;
 

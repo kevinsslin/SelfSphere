@@ -30,7 +30,8 @@ type Comment = {
 };
 
 export default function PostPage() {
-  const { id } = useParams();
+  const params = useParams();
+  const id = params?.id as string;
   const { address } = useAccount();
   const [post, setPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -257,7 +258,7 @@ export default function PostPage() {
               </div>
             ) : (
               <div className="mt-6 p-3 bg-yellow-50 text-yellow-700 rounded-md">
-                You cannot comment on this post due to the author's restrictions.
+                You cannot comment on this post due to the author&apos;s restrictions.
               </div>
             )}
           </div>
