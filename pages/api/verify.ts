@@ -6,11 +6,28 @@ import {
 } from '@selfxyz/core';
 import { kv } from '@vercel/kv';
 import { SelfApp } from '@selfxyz/qrcode';
+import { supabase } from '../../lib/supabase';
+
+type PostData = {
+    title: string;
+    content: string;
+    user_id: string;
+    allowed_commenters: Record<string, unknown> | null;
+    disclosed_attributes: Record<string, boolean>;
+    reward_enabled: boolean;
+    reward_type: number | null;
+};
+
+type CommentData = {
+    post_id: string;
+    content: string;
+    user_id: string;
+};
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method === 'POST') {
         try {
-            const { proof, publicSignals } = req.body;
+            const { proof, publicSignals, actionType, postData } = req.body;
 
             if (!proof || !publicSignals) {
                 return res.status(400).json({ message: 'Proof and publicSignals are required' });
@@ -75,9 +92,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }
             
             const configuredVerifier = new SelfBackendVerifier(
-                "self-playground",
-                //"https://2cad-106-105-96-113.ngrok-free.app",
-                "https://playground-self-flame.vercel.app",
+                "self-sphere",
+                "https://6317-111-235-226-130.ngrok-free.app",
+                //"https://playground-self-flame.vercel.app",
                 "uuid",
                 true // This is to enable the mock passport
             );
@@ -137,6 +154,65 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     filteredSubject.expiry_date = "Not disclosed";
                 }
                 
+                // Handle database operations based on actionType
+                let dbOperationResult = null;
+                
+                if (actionType === 'create_post' && postData) {
+                    // Create a new post in the database
+                    console.log("Creating new post with data:", postData);
+                    const { data, error } = await supabase
+                        .from('posts')
+                        .insert([postData as PostData])
+                        .select()
+                        .single();
+                        
+                    if (error) {
+                        console.error("Error creating post:", error);
+                        return res.status(500).json({
+                            status: 'error',
+                            message: 'Failed to create post',
+                            error: error.message
+                        });
+                    }
+                    
+                    dbOperationResult = data;
+                    console.log("Post created successfully:", data);
+                } else if (actionType === 'create_comment' && postData) {
+                    // Create a new comment in the database
+                    console.log("Creating new comment with data:", postData);
+                    const { data, error } = await supabase
+                        .from('comments')
+                        .insert([postData as CommentData])
+                        .select()
+                        .single();
+                        
+                    if (error) {
+                        console.error("Error creating comment:", error);
+                        return res.status(500).json({
+                            status: 'error',
+                            message: 'Failed to create comment',
+                            error: error.message
+                        });
+                    }
+                    
+                    // Check if post has rewards enabled and process them
+                    if (postData.post_id) {
+                        const { data: postData, error: postError } = await supabase
+                            .from('posts')
+                            .select('reward_enabled, reward_type')
+                            .eq('post_id', postData.post_id)
+                            .single();
+                            
+                        if (!postError && postData?.reward_enabled) {
+                            // Process rewards based on reward_type
+                            await processRewards(postData.post_id, postData.user_id, postData.reward_type);
+                        }
+                    }
+                    
+                    dbOperationResult = data;
+                    console.log("Comment created successfully:", data);
+                }
+                
                 res.status(200).json({
                     status: 'success',
                     result: result.isValid,
@@ -148,7 +224,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                             const entry = Object.entries(countryCodes).find(([_, name]) => name === countryName);
                             return entry ? entry[0] : countryName;
                         })
-                    }
+                    },
+                    dbOperationResult
                 });
             } else {
                 res.status(400).json({
@@ -167,5 +244,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
     } else {
         res.status(405).json({ message: 'Method not allowed' });
+    }
+}
+
+// Helper function to process rewards
+async function processRewards(postId: string, userId: string, rewardType: number) {
+    try {
+        // For reward type 1 (first commenter), check if this is the first comment
+        if (rewardType === 1) {
+            // Count existing rewards for this post
+            const { count, error: countError } = await supabase
+                .from('rewards')
+                .select('*', { count: 'exact', head: true })
+                .eq('post_id', postId)
+                .eq('reward_type', 1);
+                
+            if (countError || (count && count > 0)) {
+                // This is not the first comment or there was an error
+                return;
+            }
+        }
+        
+        // Create reward record
+        await supabase
+            .from('rewards')
+            .insert([{
+                post_id: postId,
+                user_id: userId,
+                reward_type: rewardType,
+                status: 'pending'
+            }]);
+            
+        console.log(`Reward (type ${rewardType}) created for user ${userId} on post ${postId}`);
+    } catch (error) {
+        console.error('Error processing rewards:', error);
     }
 }

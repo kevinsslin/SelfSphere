@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Self Playground",
-  description: "Self Playground",
+  title: "SelfSphere Forum",
+  description: "A decentralized discussion platform with Web3 verification",
 };
 
 export default function RootLayout({
@@ -28,7 +28,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Web3Provider>{children}</Web3Provider>
+        <Web3Provider>
+          {children}
+        </Web3Provider>
       </body>
     </html>
   );
