@@ -93,8 +93,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             
             const configuredVerifier = new SelfBackendVerifier(
                 "self-sphere",
-                "https://6317-111-235-226-130.ngrok-free.app",
-                //"https://playground-self-flame.vercel.app",
+                //"https://6317-111-235-226-130.ngrok-free.app",
+                "https://self-sphere-we61.vercel.app",
                 "uuid",
                 true // This is to enable the mock passport
             );
