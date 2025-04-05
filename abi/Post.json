@@ -43,6 +43,11 @@
         "internalType": "bool[3]"
       },
       {
+        "name": "_relayer",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
         "name": "_gender",
         "type": "string",
         "internalType": "string"
@@ -83,7 +88,7 @@
   },
   {
     "type": "function",
-    "name": "owner",
+    "name": "relayer",
     "inputs": [],
     "outputs": [
       {
@@ -96,21 +101,8 @@
   },
   {
     "type": "function",
-    "name": "renounceOwnership",
+    "name": "rewardToken",
     "inputs": [],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "transferOwnership",
-    "inputs": [
-      {
-        "name": "newOwner",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
     "outputs": [],
     "stateMutability": "nonpayable"
   },
@@ -155,63 +147,43 @@
     "stateMutability": "nonpayable"
   },
   {
-    "type": "function",
-    "name": "verifySelfProof",
-    "inputs": [
-      {
-        "name": "proof",
-        "type": "tuple",
-        "internalType": "struct IVcAndDiscloseCircuitVerifier.VcAndDiscloseProof",
-        "components": [
-          {
-            "name": "a",
-            "type": "uint256[2]",
-            "internalType": "uint256[2]"
-          },
-          {
-            "name": "b",
-            "type": "uint256[2][2]",
-            "internalType": "uint256[2][2]"
-          },
-          {
-            "name": "c",
-            "type": "uint256[2]",
-            "internalType": "uint256[2]"
-          },
-          {
-            "name": "pubSignals",
-            "type": "uint256[21]",
-            "internalType": "uint256[21]"
-          }
-        ]
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
     "type": "event",
-    "name": "OwnershipTransferred",
+    "name": "InvalidAge",
     "inputs": [
       {
-        "name": "previousOwner",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
-      },
-      {
-        "name": "newOwner",
-        "type": "address",
-        "indexed": true,
-        "internalType": "address"
+        "name": "age",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
       }
     ],
     "anonymous": false
   },
   {
-    "type": "error",
-    "name": "InvalidAge",
-    "inputs": []
+    "type": "event",
+    "name": "InvalidGender",
+    "inputs": [
+      {
+        "name": "gender",
+        "type": "string",
+        "indexed": false,
+        "internalType": "string"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "InvalidNationality",
+    "inputs": [
+      {
+        "name": "nationality",
+        "type": "string",
+        "indexed": false,
+        "internalType": "string"
+      }
+    ],
+    "anonymous": false
   },
   {
     "type": "error",
@@ -220,40 +192,19 @@
   },
   {
     "type": "error",
-    "name": "InvalidGender",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "InvalidNationality",
-    "inputs": []
+    "name": "InvalidMsgSender",
+    "inputs": [
+      {
+        "name": "msgSender",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
   },
   {
     "type": "error",
     "name": "InvalidScope",
     "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "OwnableInvalidOwner",
-    "inputs": [
-      {
-        "name": "owner",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
-  },
-  {
-    "type": "error",
-    "name": "OwnableUnauthorizedAccount",
-    "inputs": [
-      {
-        "name": "account",
-        "type": "address",
-        "internalType": "address"
-      }
-    ]
   },
   {
     "type": "error",

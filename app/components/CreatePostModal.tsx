@@ -268,15 +268,15 @@ export default function CreatePostModal({ onClose }: CreatePostModalProps) {
         };
       }
       
-      if (postData.commentRestrictions.enabled[RESTRICTIONS.GENDER] && postData.commentRestrictions.gender) {
-        restrictions.gender = postData.commentRestrictions.gender;
+      if (postData.commentRestrictions.enabled[RESTRICTIONS.GENDER]) {
+        restrictions.gender = postData.commentRestrictions.gender; // Store the specific gender value
       }
       
       if (postData.commentRestrictions.enabled[RESTRICTIONS.AGE]) {
         restrictions.minimumAge = postData.commentRestrictions.minimumAge;
       }
       
-      if (postData.commentRestrictions.enabled[RESTRICTIONS.ISSUING_STATE] && postData.commentRestrictions.issuing_state) {
+      if (postData.commentRestrictions.enabled[RESTRICTIONS.ISSUING_STATE]) {
         restrictions.issuing_state = postData.commentRestrictions.issuing_state;
       }
       
@@ -286,9 +286,9 @@ export default function CreatePostModal({ onClose }: CreatePostModalProps) {
         content: postData.content,
         user_id: userId,
         allowed_commenters: Object.keys(restrictions).length > 0 ? restrictions : null,
-        anonymity_flag: false, // Default to non-anonymous
-        disclosed_attributes: postData.disclosedAttributes, // Store user-selected attributes (boolean values only)
-        status: 'pending', // Set status to pending
+        anonymity_flag: false,
+        disclosed_attributes: postData.disclosedAttributes,
+        status: 'pending',
         reward_enabled: postData.reward.enabled,
         reward_type: postData.reward.enabled ? postData.reward.type : null
       };

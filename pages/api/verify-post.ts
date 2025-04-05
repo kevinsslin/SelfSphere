@@ -221,7 +221,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                         // Call createPost function
                         const tx = await contract.createPost(
                             // hashEndpointWithScope("https://self-sphere.vercel.app/", "SelfSphere"),
-                            hashEndpointWithScope("https://6317-111-235-226-130.ngrok-free.app/", "SelfSphere"),
+                            hashEndpointWithScope("https://6317-111-235-226-130.ngrok-free.app/", "self-sphere-comment"),
                             olderThanEnabled,
                             olderThan,
                             gender,
@@ -232,7 +232,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                         const receipt = await tx.wait();
                         
                         // Get the PostCreated event from the receipt
-                        const event = receipt.logs.find(log => 
+                        const event = receipt.logs.find((log: ethers.EventLog) => 
                             log.fragment?.name === 'PostCreated'
                         );
                         
