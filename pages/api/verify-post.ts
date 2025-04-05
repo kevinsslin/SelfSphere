@@ -2,13 +2,15 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { 
     getUserIdentifier, 
     SelfBackendVerifier, 
-    countryCodes 
+    countryCodes,
+    hashEndpointWithScope 
 } from '@selfxyz/core';
 import { kv } from '@vercel/kv';
 import type { SelfApp } from '@selfxyz/qrcode';
 import { supabase } from '../../lib/supabase';
 import { ethers } from 'ethers';
-import abi from '../../abi/Post.json';
+import abi from '../../abi/PostFactory.json';
+import { RESTRICTIONS } from '../../app/utils/constants';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method === 'POST') {
@@ -101,10 +103,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             
             const configuredVerifier = new SelfBackendVerifier(
                 "self-sphere-post",
-                //"https://6317-111-235-226-130.ngrok-free.app",
-                "https://self-sphere.vercel.app",
+                "https://6317-111-235-226-130.ngrok-free.app",
+                //"https://self-sphere.vercel.app",
                 "uuid",
-                false // This is to enable the mock passport
+                true // This is to enable the mock passport
             );
             
             console.log("Verifier configuration:", {
@@ -199,28 +201,93 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
                 // On-chain interaction
                 const provider = new ethers.JsonRpcProvider("https://alfajores-forno.celo-testnet.org/");
-                const privateKey = process.env.PRIVATE_KEY || "";
-                const signer = new ethers.Wallet(privateKey, provider);
-                const contractAddress = process.env.CONTRACT_ADDRESS || "";
-                const contract = new ethers.Contract(contractAddress, abi, signer);
+                const privateKey = process.env.PRIVATE_KEY;
+                const contractAddress = process.env.POST_FACTORY_ADDRESS;
                 
-                try {
-                    const tx = await contract.verifySelfProof({
-                        a: proof.a,
-                        b: [
-                          [proof.b[0][1], proof.b[0][0]],
-                          [proof.b[1][1], proof.b[1][0]],
-                        ],
-                        c: proof.c,
-                        pubSignals: publicSignals,
-                    });
-                    const receipt = await tx.wait();
-                    console.log("Successfully called verifySelfProof function:", {
-                        txHash: tx.hash
-                    });
-                } catch (contractError) {
-                    console.error("On-chain verification failed, but continuing:", contractError);
-                    // Continue processing even if on-chain verification fails
+                // Only proceed with contract interaction if both private key and contract address are set
+                if (privateKey && contractAddress) {
+                    const signer = new ethers.Wallet(privateKey, provider);
+                    const contract = new ethers.Contract(contractAddress, abi, signer);
+                    
+                    try {
+                        // Extract age and gender restrictions from post data with default values
+                        const defaultRestrictions = {
+                            enabled: {
+                                [RESTRICTIONS.AGE]: false,
+                                [RESTRICTIONS.GENDER]: false,
+                                [RESTRICTIONS.NATIONALITY]: false
+                            },
+                            minimumAge: 0,
+                            gender: "",
+                            nationality: {
+                                countries: []
+                            }
+                        };
+
+                        const restrictions = pendingPost.commentRestrictions || defaultRestrictions;
+                        
+                        const olderThanEnabled = restrictions.enabled[RESTRICTIONS.AGE];
+                        const olderThan = restrictions.minimumAge || 0;
+                        const gender = restrictions.enabled[RESTRICTIONS.GENDER] ? 
+                            restrictions.gender : "";
+                        const nationality = restrictions.enabled[RESTRICTIONS.NATIONALITY] && 
+                            restrictions.nationality?.countries?.length > 0 ?
+                            restrictions.nationality.countries[0] : "";
+
+                        // Call createPost function
+                        const tx = await contract.createPost(
+                            // hashEndpointWithScope("https://self-sphere.vercel.app/", "SelfSphere"),
+                            hashEndpointWithScope("https://6317-111-235-226-130.ngrok-free.app/", "SelfSphere"),
+                            olderThanEnabled,
+                            olderThan,
+                            gender,
+                            nationality
+                        );
+                        
+                        // Wait for transaction to be mined
+                        const receipt = await tx.wait();
+                        
+                        // Get the PostCreated event from the receipt
+                        const event = receipt.logs.find(log => 
+                            log.fragment?.name === 'PostCreated'
+                        );
+                        
+                        if (!event) {
+                            throw new Error('PostCreated event not found in transaction receipt');
+                        }
+                        
+                        const postAddress = event.args[1];
+                        
+                        console.log("Successfully created post on-chain:", {
+                            txHash: tx.hash,
+                            postAddress
+                        });
+
+                        // Update post table with contract address
+                        const { error: updateError } = await supabase
+                            .from('posts')
+                            .update({
+                                post_contract_address: postAddress,
+                                updated_at: new Date().toISOString()
+                            })
+                            .eq('post_id', postId);
+
+                        if (updateError) {
+                            console.error("Failed to update post with contract address:", updateError);
+                            throw new Error(`Failed to update post with contract address: ${updateError.message}`);
+                        }
+                    } catch (contractError) {
+                        console.error("On-chain post creation failed, but continuing:", contractError);
+                        res.status(400).json({
+                            status: 'error',
+                            result: false,
+                            message: 'On-chain post creation failed',
+                            details: {},
+                        });
+                        throw contractError;
+                    }
+                } else {
+                    console.log("Skipping on-chain post creation: Missing PRIVATE_KEY or POST_FACTORY_ADDRESS environment variables");
                 }
                 
                 const filteredSubject = { ...result.credentialSubject };

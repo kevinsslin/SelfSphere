@@ -30,7 +30,7 @@ export default function CreatePostModal({ onClose }: CreatePostModalProps) {
         [RESTRICTIONS.ISSUING_STATE]: false
       },
       nationality: {
-        mode: 'exclude', // or 'include'
+        mode: 'include', // Only include mode is allowed
         countries: [] as string[]
       },
       gender: '',
@@ -62,7 +62,7 @@ export default function CreatePostModal({ onClose }: CreatePostModalProps) {
     
     if (currentStep === 4) {
       console.log('Creating pending post');
-      // 创建pending状态的帖子并获取帖子ID用于后续验证
+      // Create a pending post and get the post ID for subsequent verification
       createPendingPost().then(() => {
         setCurrentStep(prev => prev + 1);
       }).catch(err => {
@@ -148,15 +148,11 @@ export default function CreatePostModal({ onClose }: CreatePostModalProps) {
     setSelectedCountries(prev => {
       if (prev.includes(country)) {
         setCountrySelectionError(null);
-        return prev.filter(c => c !== country);
+        return [];
       }
       
-      if (prev.length >= 40) {
-        setCountrySelectionError('Maximum 40 countries can be selected');
-        return prev;
-      }
-      
-      return [...prev, country];
+      // Only allow one country to be selected
+      return [country];
     });
   };
 
@@ -194,7 +190,7 @@ export default function CreatePostModal({ onClose }: CreatePostModalProps) {
     }));
   };
 
-  // 创建pending状态的帖子
+  // Create a pending post
   const createPendingPost = async () => {
     if (!address) {
       throw new Error('Please connect your wallet first');
@@ -495,44 +491,18 @@ export default function CreatePostModal({ onClose }: CreatePostModalProps) {
                 <div className="border border-gray-300 rounded-md p-4">
                   <h4 className="text-md font-medium mb-3 text-gray-800">Nationality Restriction</h4>
                   
-                  <div className="flex items-center mb-3">
-                    <span className="mr-4 text-gray-700">Mode:</span>
-                    <button
-                      type="button"
-                      onClick={toggleNationalityMode}
-                      className={`px-3 py-1 rounded mr-2 ${
-                        postData.commentRestrictions.nationality.mode === 'include' 
-                          ? 'bg-green-600 text-white' 
-                          : 'bg-gray-200 text-gray-700'
-                      }`}
-                    >
-                      Include
-                    </button>
-                    <button
-                      type="button"
-                      onClick={toggleNationalityMode}
-                      className={`px-3 py-1 rounded ${
-                        postData.commentRestrictions.nationality.mode === 'exclude' 
-                          ? 'bg-red-600 text-white' 
-                          : 'bg-gray-200 text-gray-700'
-                      }`}
-                    >
-                      Exclude
-                    </button>
-                  </div>
-                  
                   <div>
                     <button
                       type="button"
                       onClick={openCountrySelector}
                       className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
                     >
-                      Configure {postData.commentRestrictions.nationality.mode === 'include' ? 'Included' : 'Excluded'} Countries
+                      Select Allowed Country
                     </button>
                     <div className="mt-2 text-sm text-gray-700">
                       {postData.commentRestrictions.nationality.countries.length > 0 
-                        ? `${postData.commentRestrictions.nationality.countries.length} countries ${postData.commentRestrictions.nationality.mode === 'include' ? 'included' : 'excluded'}` 
-                        : `No countries ${postData.commentRestrictions.nationality.mode === 'include' ? 'included' : 'excluded'}`}
+                        ? `Only users from ${postData.commentRestrictions.nationality.countries[0]} can comment` 
+                        : 'No country selected'}
                     </div>
                   </div>
                 </div>
@@ -688,7 +658,8 @@ export default function CreatePostModal({ onClose }: CreatePostModalProps) {
                   selfApp={new SelfAppBuilder({
                     appName: "SelfSphere",
                     scope: "self-sphere-post",
-                    endpoint: "https://self-sphere.vercel.app/api/verify-post",
+                    //endpoint: "https://self-sphere.vercel.app/api/verify-post",
+                    endpoint: "https://6317-111-235-226-130.ngrok-free.app/api/verify-post",
                     logoBase64: logo,
                     userId,
                     disclosures: {
@@ -755,7 +726,7 @@ export default function CreatePostModal({ onClose }: CreatePostModalProps) {
         <div className="fixed inset-0 bg-white bg-opacity-90 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto border border-gray-300">
             <h3 className="text-xl font-semibold mb-4">
-              Select Countries to {postData.commentRestrictions.nationality.mode === 'include' ? 'Include' : 'Exclude'}
+              Select Allowed Country
             </h3>
             
             {countrySelectionError && (
@@ -778,7 +749,8 @@ export default function CreatePostModal({ onClose }: CreatePostModalProps) {
               {filteredCountries.map(([code, country]) => (
                 <label key={code} className="flex items-center space-x-2 p-1 hover:bg-gray-100 rounded">
                   <input
-                    type="checkbox"
+                    type="radio"
+                    name="country"
                     checked={selectedCountries.includes(country)}
                     onChange={() => handleCountryToggle(country)}
                     className="h-4 w-4"

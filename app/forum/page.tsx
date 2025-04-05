@@ -222,6 +222,7 @@ export default function ForumPage() {
             *,
             user:users(display_name)
           `)
+          .eq('status', 'posted')
           .order('created_at', { ascending: false });
 
         if (error) {
