@@ -3,34 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { supabase } from '../../lib/supabase';
-import SelfQRcodeWrapper, { SelfApp, SelfAppBuilder } from '@selfxyz/qrcode';
+import SelfQRcodeWrapper, { type SelfApp, SelfAppBuilder } from '@selfxyz/qrcode';
 import { v4 as uuidv4 } from 'uuid';
 import { logo } from '../content/playgroundAppLogo';
 import { countryCodes } from '@selfxyz/core';
-
-// Passport attributes that can be disclosed/verified
-const PASSPORT_ATTRIBUTES = [
-  { key: 'nationality', label: 'Nationality' },
-  { key: 'gender', label: 'Gender' },
-  { key: 'issuing_state', label: 'Issuing State' },
-  { key: 'name', label: 'Name' },
-  { key: 'date_of_birth', label: 'Date of Birth' },
-  { key: 'expiry_date', label: 'Expiry Date' }
-];
-
-// Reward types
-const REWARD_TYPES = [
-  { id: 1, name: 'First Commenter Token', description: 'Award a token to the first person who comments on this post' },
-  { id: 2, name: 'Participation NFT', description: 'Award an NFT to everyone who comments on this post' }
-];
-
-// Available restrictions
-const RESTRICTIONS = {
-  NATIONALITY: 'nationality',
-  GENDER: 'gender',
-  AGE: 'age',
-  ISSUING_STATE: 'issuing_state'
-};
+import { PASSPORT_ATTRIBUTES, REWARD_TYPES, RESTRICTIONS, OPERATION_TYPES } from '../utils/constants';
 
 type CreatePostModalProps = {
   onClose: () => void;
@@ -65,10 +42,10 @@ export default function CreatePostModal({ onClose }: CreatePostModalProps) {
       amount: '1'
     }
   });
+  
   const [userId, setUserId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [verificationSuccess, setVerificationSuccess] = useState(false);
   
   // Country selection
   const [showCountryModal, setShowCountryModal] = useState(false);
@@ -82,6 +59,92 @@ export default function CreatePostModal({ onClose }: CreatePostModalProps) {
       setUserId(uuidv4());
     }
   }, [currentStep, userId]);
+
+  // Function to handle creating a post after verification
+  const handleCreatePost = async () => {
+    try {
+      setIsSubmitting(true);
+      
+      if (!address) {
+        setError('Please connect your wallet first');
+        return;
+      }
+      
+      // Get user ID from wallet address
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('user_id')
+        .eq('wallet_address', address)
+        .single();
+      
+      if (userError) {
+        throw new Error('User not found');
+      }
+      
+      // Prepare restrictions based on enabled restrictions
+      const restrictions: Record<string, unknown> = {};
+      
+      if (postData.commentRestrictions.enabled[RESTRICTIONS.NATIONALITY]) {
+        restrictions.nationality = {
+          mode: postData.commentRestrictions.nationality.mode,
+          countries: postData.commentRestrictions.nationality.countries
+        };
+      }
+      
+      if (postData.commentRestrictions.enabled[RESTRICTIONS.GENDER] && postData.commentRestrictions.gender) {
+        restrictions.gender = postData.commentRestrictions.gender;
+      }
+      
+      if (postData.commentRestrictions.enabled[RESTRICTIONS.AGE]) {
+        restrictions.minimumAge = postData.commentRestrictions.minimumAge;
+      }
+      
+      if (postData.commentRestrictions.enabled[RESTRICTIONS.ISSUING_STATE] && postData.commentRestrictions.issuing_state) {
+        restrictions.issuing_state = postData.commentRestrictions.issuing_state;
+      }
+
+      // Prepare post data
+      const finalPostData = {
+        title: postData.title,
+        content: postData.content,
+        user_id: userData.user_id,
+        allowed_commenters: Object.keys(restrictions).length > 0 ? restrictions : null,
+        disclosed_attributes: Object.keys(postData.disclosedAttributes)
+          .filter(key => postData.disclosedAttributes[key])
+          .reduce((acc, key) => {
+            acc[key] = true;
+            return acc;
+          }, {} as Record<string, boolean>),
+        reward_enabled: postData.reward.enabled,
+        reward_type: postData.reward.enabled ? postData.reward.type : null
+      };
+      
+      // Send post data to the API
+      const response = await fetch('/api/submitVerifiedPost', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          postData: finalPostData,
+          verificationResult: { isValid: true }
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create post');
+      }
+      
+      // Close modal after successful post creation
+      onClose();
+    } catch (err) {
+      console.error('Error creating post:', err);
+      setError('Failed to create post. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleNext = () => {
     if (currentStep === 1 && (!postData.title || !postData.content)) {
@@ -203,93 +266,10 @@ export default function CreatePostModal({ onClose }: CreatePostModalProps) {
     setShowCountryModal(false);
   };
 
-  const handleVerificationSuccess = () => {
-    setVerificationSuccess(true);
-  };
-
-  const handleSubmit = async () => {
-    if (!address) {
-      setError('Please connect your wallet first');
-      return;
-    }
-    
-    if (verificationSuccess) {
-      onClose();
-      return;
-    }
-    
-    if (currentStep === 5) {
-      return;
-    }
-    
-    setIsSubmitting(true);
-    setError('');
-    
-    try {
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('user_id')
-        .eq('wallet_address', address)
-        .single();
-      
-      if (userError) {
-        throw new Error('User not found');
-      }
-      
-      const restrictions: Record<string, unknown> = {};
-      
-      if (postData.commentRestrictions.enabled[RESTRICTIONS.NATIONALITY]) {
-        restrictions.nationality = {
-          mode: postData.commentRestrictions.nationality.mode,
-          countries: postData.commentRestrictions.nationality.countries
-        };
-      }
-      
-      if (postData.commentRestrictions.enabled[RESTRICTIONS.GENDER] && postData.commentRestrictions.gender) {
-        restrictions.gender = postData.commentRestrictions.gender;
-      }
-      
-      if (postData.commentRestrictions.enabled[RESTRICTIONS.AGE]) {
-        restrictions.minimumAge = postData.commentRestrictions.minimumAge;
-      }
-      
-      if (postData.commentRestrictions.enabled[RESTRICTIONS.ISSUING_STATE] && postData.commentRestrictions.issuing_state) {
-        restrictions.issuing_state = postData.commentRestrictions.issuing_state;
-      }
-      
-      const { data, error } = await supabase
-        .from('posts')
-        .insert([
-          {
-            title: postData.title,
-            content: postData.content,
-            user_id: userData.user_id,
-            allowed_commenters: Object.keys(restrictions).length > 0 ? restrictions : null,
-            disclosed_attributes: Object.keys(postData.disclosedAttributes)
-              .filter(key => postData.disclosedAttributes[key])
-              .reduce((acc, key) => {
-                acc[key] = true;
-                return acc;
-              }, {} as Record<string, boolean>),
-            reward_enabled: postData.reward.enabled,
-            reward_type: postData.reward.enabled ? postData.reward.type : null
-          }
-        ])
-        .select()
-        .single();
-      
-      if (error) {
-        throw error;
-      }
-      
-      onClose();
-    } catch (err) {
-      console.error('Error creating post:', err);
-      setError('Failed to create post. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  // Filter countries based on search query
+  const filteredCountries = Object.entries(countryCodes).filter(([_, country]) =>
+    country.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const toggleDisclosedAttribute = (key: string) => {
     setPostData(prev => ({
@@ -300,11 +280,6 @@ export default function CreatePostModal({ onClose }: CreatePostModalProps) {
       }
     }));
   };
-
-  // Filter countries based on search query
-  const filteredCountries = Object.entries(countryCodes).filter(([_, country]) =>
-    country.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
@@ -672,8 +647,7 @@ export default function CreatePostModal({ onClose }: CreatePostModalProps) {
                   selfApp={new SelfAppBuilder({
                     appName: "SelfSphere",
                     scope: "self-sphere",
-                    // endpoint: "https://6317-111-235-226-130.ngrok-free.app/api/verify",
-                    endpoint: "https://self-sphere.vercel.app/api/verify",
+                    endpoint: "/api/verify",
                     logoBase64: logo,
                     userId,
                     disclosures: {
@@ -685,42 +659,10 @@ export default function CreatePostModal({ onClose }: CreatePostModalProps) {
                       expiry_date: postData.disclosedAttributes.expiry_date || false,
                       minimumAge: postData.disclosedMinimumAge > 0 ? postData.disclosedMinimumAge : undefined
                     },
-                    devMode: true,
-                    additionalData: {
-                      actionType: 'create_post',
-                      postData: {
-                        title: postData.title,
-                        content: postData.content,
-                        allowed_commenters: postData.commentRestrictions.enabled[RESTRICTIONS.NATIONALITY] || 
-                                           postData.commentRestrictions.enabled[RESTRICTIONS.GENDER] || 
-                                           postData.commentRestrictions.enabled[RESTRICTIONS.AGE] || 
-                                           postData.commentRestrictions.enabled[RESTRICTIONS.ISSUING_STATE] ? 
-                                           {
-                                             nationality: postData.commentRestrictions.enabled[RESTRICTIONS.NATIONALITY] ? {
-                                               mode: postData.commentRestrictions.nationality.mode,
-                                               countries: postData.commentRestrictions.nationality.countries
-                                             } : undefined,
-                                             gender: postData.commentRestrictions.enabled[RESTRICTIONS.GENDER] ? 
-                                                     postData.commentRestrictions.gender : undefined,
-                                             minimumAge: postData.commentRestrictions.enabled[RESTRICTIONS.AGE] ? 
-                                                        postData.commentRestrictions.minimumAge : undefined,
-                                             issuing_state: postData.commentRestrictions.enabled[RESTRICTIONS.ISSUING_STATE] ? 
-                                                           postData.commentRestrictions.issuing_state : undefined
-                                           } : null,
-                        disclosed_attributes: Object.keys(postData.disclosedAttributes)
-                                              .filter(key => postData.disclosedAttributes[key])
-                                              .reduce((acc, key) => {
-                                                acc[key] = true;
-                                                return acc;
-                                              }, {} as Record<string, boolean>),
-                        reward_enabled: postData.reward.enabled,
-                        reward_type: postData.reward.enabled ? postData.reward.type : null
-                      }
-                    }
+                    devMode: true
                   } as Partial<SelfApp>).build()}
                   onSuccess={() => {
-                    setVerificationSuccess(true);
-                    onClose();
+                    handleCreatePost();
                   }}
                   darkMode={false}
                 />

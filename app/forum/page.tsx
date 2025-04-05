@@ -23,6 +23,7 @@ type Post = {
   disclosed_attributes?: Record<string, string | number | boolean>;
 };
 
+// TODO: remove this mock post
 const mockPost = {
   post_id: "12345",
   title: "My First Post in SelfSphere",

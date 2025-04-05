@@ -18,7 +18,7 @@ if (!projectId) {
 
 // Configure the wallet connection
 const config = getDefaultConfig({
-  appName: 'ETH Taipei Discussion Platform',
+  appName: 'SelfSphere',
   projectId, // Use environment variable
   chains: [celo, celoAlfajores],
   ssr: true,
