@@ -38,3 +38,21 @@ body {
   white-space: nowrap;
   animation: marquee 25s linear infinite;
 }
+
+@keyframes shake-intense {
+  0% { transform: translateX(0); }
+  10% { transform: translateX(-10px); }
+  20% { transform: translateX(10px); }
+  30% { transform: translateX(-12px); }
+  40% { transform: translateX(12px); }
+  50% { transform: translateX(-14px); }
+  60% { transform: translateX(14px); }
+  70% { transform: translateX(-12px); }
+  80% { transform: translateX(12px); }
+  90% { transform: translateX(-10px); }
+  100% { transform: translateX(0); }
+}
+
+.animate-shake-intense {
+  animation: shake-intense 1s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
