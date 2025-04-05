@@ -220,10 +220,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
                         // Call createPost function
                         const tx = await contract.createPost(
-                            // hashEndpointWithScope("https://self-sphere.vercel.app/", "SelfSphere"),
                             hashEndpointWithScope("https://6317-111-235-226-130.ngrok-free.app/", "self-sphere-comment"),
                             olderThanEnabled,
                             olderThan,
+                            pendingPost.token_name || "",
+                            pendingPost.token_symbol || "",
                             gender,
                             nationality
                         );

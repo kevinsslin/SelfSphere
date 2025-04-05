@@ -33,6 +33,8 @@ CREATE TABLE IF NOT EXISTS posts (
   allowed_viewers JSONB, -- e.g., {"nationality": "Taiwan", "min_age": 20}
   allowed_commenters JSONB, -- comment permission rules
   disclosed_attributes JSONB, -- User-disclosed passport attributes, e.g. {"nationality": true, "gender": true}
+  token_name VARCHAR(255),
+  token_symbol VARCHAR(255),
   status VARCHAR(20) DEFAULT 'pending', -- post status: pending, posted, cancelled
   likes_count INTEGER DEFAULT 0,
   reward_enabled BOOLEAN DEFAULT false,
