@@ -30,7 +30,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             
             // // Now you can interact with the contract
             // // Example: await contract.verifySelfProof(...);
-            // const tx = await contract.verifySelfProof(proof, publicSignals);
+            // const tx = await contract.
+            // 
+            // 
+            // 
+            // (proof, publicSignals);
             // const receipt = await tx.wait();
             // console.log("Verification transaction mined:", {
             //     hash: tx.hash,
@@ -94,8 +98,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             
             const configuredVerifier = new SelfBackendVerifier(
                 "self-sphere",
-                "https://6317-111-235-226-130.ngrok-free.app",
-                // "https://self-sphere.vercel.app",
+                "https://c25a-111-235-226-130.ngrok-free.app",
                 "uuid",
                 true // This is to enable the mock passport
             );

@@ -647,7 +647,7 @@ export default function CreatePostModal({ onClose }: CreatePostModalProps) {
                   selfApp={new SelfAppBuilder({
                     appName: "SelfSphere",
                     scope: "self-sphere",
-                    endpoint: "/api/verify",
+                    endpoint: "https://c25a-111-235-226-130.ngrok-free.app/api/verify",
                     logoBase64: logo,
                     userId,
                     disclosures: {
