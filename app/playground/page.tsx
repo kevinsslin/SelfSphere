@@ -151,8 +151,8 @@ export default function PlaygroundPage() {
     const selfApp = new SelfAppBuilder({
         appName: "SelfSphere",
         scope: "self-sphere",
-        //endpoint: "https://6317-111-235-226-130.ngrok-free.app/api/verify-post",
-        endpoint: "https://self-sphere.vercel.app/api/verify-post",
+        endpoint: "https://6317-111-235-226-130.ngrok-free.app/api/verify-post",
+        //endpoint: "https://self-sphere.vercel.app/api/verify-post",
         logoBase64: logo,
         userId,
         disclosures: {

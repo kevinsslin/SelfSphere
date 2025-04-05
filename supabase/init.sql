@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS posts (
   post_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID REFERENCES users(user_id) ON DELETE SET NULL,
+  post_contract_address VARCHAR(255),
   title VARCHAR(255),
   content TEXT,
   anonymity_flag BOOLEAN DEFAULT false,
