@@ -152,7 +152,7 @@ export default function PlaygroundPage() {
         appName: "SelfSphere",
         scope: "self-sphere",
         //endpoint: "https://6317-111-235-226-130.ngrok-free.app/api/verify",
-        endpoint: "https://self-sphere-we61.vercel.app/api/verify",
+        endpoint: "https://self-sphere.vercel.app/api/verify",
         logoBase64: logo,
         userId,
         disclosures: {
