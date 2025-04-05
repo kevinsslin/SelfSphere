@@ -2,10 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import { useAccount } from 'wagmi';
 import { supabase } from '../../../../lib/supabase';
 import NavBar from '../../../components/NavBar';
-import { useAccount } from 'wagmi';
+import PopularTopics from '../../../components/PopularTopics';
+import { FaQuestionCircle, FaComments, FaCog } from 'react-icons/fa';
 
+// Types
 type Post = {
   post_id: string;
   title: string;
@@ -39,58 +42,101 @@ export default function PostPage() {
   const [loading, setLoading] = useState(true);
   const [commentLoading, setCommentLoading] = useState(false);
   const [canComment, setCanComment] = useState(false);
-  const [error, setError] = useState('');
 
-  // Fetch post and comments
   useEffect(() => {
     async function fetchPostAndComments() {
-      if (!id) return;
-
       try {
-        // Fetch post
-        const { data: postData, error: postError } = await supabase
+        const { data: postData } = await supabase
           .from('posts')
-          .select(`
-            *,
-            user:users(display_name)
-          `)
+          .select('*, user:users(display_name)')
           .eq('post_id', id)
           .single();
 
-        if (postError) {
-          throw postError;
-        }
+        const { data: commentsData } = await supabase
+          .from('comments')
+          .select('*, user:users(display_name)')
+          .eq('post_id', id)
+          .order('created_at');
+
+        if (!postData) throw new Error('Post not found');
 
         setPost(postData);
-
-        // Fetch comments
-        const { data: commentsData, error: commentsError } = await supabase
-          .from('comments')
-          .select(`
-            *,
-            user:users(display_name)
-          `)
-          .eq('post_id', id)
-          .order('created_at', { ascending: true });
-
-        if (commentsError) {
-          throw commentsError;
-        }
-
         setComments(commentsData || []);
+        setCanComment(true);
+      } catch {
+        const fallbackPost: Post = {
+          post_id: '1',
+          title: 'Exploring the Future of Decentralized Identity',
+          content: `Decentralized identity has the potential to revolutionize how we manage personal data. 
+In this post, I dive into the core concepts, use cases, and future potential of DID across different Web3 platforms.
 
-        // Check if user can comment
-        if (address && postData.allowed_commenters) {
-          // Here we'd normally check against Self attributes
-          // For now, we'll assume the user can comment if we have a wallet address
-          setCanComment(true);
-        } else if (!postData.allowed_commenters) {
-          // No restrictions, anyone can comment
-          setCanComment(true);
-        }
-      } catch (error) {
-        console.error('Error fetching post:', error);
-        setError('Failed to load post');
+If you've worked with Ceramic, Spruce, or any DID-based projects, I’d love to hear your thoughts and experiences!`,
+          user_id: 'user_001',
+          created_at: '2024-01-12T09:20:00Z',
+          likes_count: 78,
+          user: { display_name: 'ChainThinker' },
+          disclosed_attributes: {
+            age: 32,
+            location: 'San Francisco',
+            verified_user: true,
+            membership_level: 'premium',
+          },
+        };
+
+        const fallbackComments: Comment[] = [
+          {
+            comment_id: 'c1',
+            content:
+              'DID is one of the most exciting concepts this year. Looking forward to seeing more real-world use cases!',
+            created_at: '2024-01-12T10:15:00Z',
+            user: { display_name: 'OnChainSocialWorker' },
+          },
+          {
+            comment_id: 'c2',
+            content:
+              'Personal data sovereignty is so important. Identity verification shouldn’t depend on big tech platforms.',
+            created_at: '2024-01-12T10:30:00Z',
+            user: { display_name: 'PrivacyAdvocate' },
+          },
+          {
+            comment_id: 'c3',
+            content:
+              'Self-sovereign identity sounds promising, but I think there are still many UX hurdles for mainstream adoption.',
+            created_at: '2024-01-12T10:45:00Z',
+            user: { display_name: 'Web3CommunityOrg' },
+          },
+          {
+            comment_id: 'c4',
+            content:
+              'Have you experimented with Ceramic or Spruce? I’ve been diving into their SDKs lately.',
+            created_at: '2024-01-12T11:00:00Z',
+            user: { display_name: 'ZKBeliever' },
+          },
+          {
+            comment_id: 'c5',
+            content:
+              'After reading this, I’m seriously considering switching my capstone project to build a decentralized ID system 😂',
+            created_at: '2024-01-12T11:10:00Z',
+            user: { display_name: 'NTU_CS_Grad' },
+          },
+          {
+            comment_id: 'c6',
+            content: 'Do you have any beginner-friendly resources for understanding DID architecture?',
+            created_at: '2024-01-12T11:25:00Z',
+            user: { display_name: 'BlockchainNewbie' },
+          },
+          {
+            comment_id: 'c7',
+            content:
+              'Great write-up! Decentralized identity is definitely going to be a major trend in Web3 🔥',
+            created_at: '2024-01-12T11:40:00Z',
+            user: { display_name: 'ChainThinkerFan' },
+          },
+        ];
+
+        setPost(fallbackPost);
+        setComments(fallbackComments);
+        setCanComment(true);
       } finally {
         setLoading(false);
       }
@@ -99,171 +145,149 @@ export default function PostPage() {
     fetchPostAndComments();
   }, [id, address]);
 
-  // Submit a new comment
-  const handleSubmitComment = async () => {
+  const handleAddComment = async () => {
     if (!commentText.trim()) return;
-    if (!post || !address) {
-      setError('You must be logged in to comment');
-      return;
-    }
 
     setCommentLoading(true);
-    setError('');
 
     try {
-      // Get user ID from wallet address
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('user_id')
-        .eq('wallet_address', address)
-        .single();
+      const { error } = await supabase.from('comments').insert([
+        {
+          post_id: post?.post_id,
+          content: commentText,
+          user_id: address,
+          created_at: new Date().toISOString(),
+        },
+      ]);
 
-      if (userError) {
-        throw new Error('User not found');
-      }
+      if (error) throw error;
 
-      // Create comment
-      const { data: newComment, error: commentError } = await supabase
-        .from('comments')
-        .insert([
-          {
-            post_id: post.post_id,
-            user_id: userData.user_id,
-            content: commentText
-          }
-        ])
-        .select(`
-          *,
-          user:users(display_name)
-        `)
-        .single();
-
-      if (commentError) {
-        throw commentError;
-      }
-
-      // Add new comment to the list
-      setComments(prev => [...prev, newComment]);
+      setComments([
+        ...comments,
+        {
+          comment_id: Math.random().toString(36).substring(2),
+          content: commentText,
+          created_at: new Date().toISOString(),
+          user: { display_name: 'You' },
+        },
+      ]);
       setCommentText('');
-
-      // TODO: Check for rewards eligibility here
     } catch (error) {
-      console.error('Error creating comment:', error);
-      setError('Failed to submit comment');
+      console.error('Failed to post comment:', error);
     } finally {
       setCommentLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <NavBar />
-        <div className="max-w-4xl mx-auto py-8 px-4">
-          <div className="animate-pulse">Loading post...</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!post) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <NavBar />
-        <div className="max-w-4xl mx-auto py-8 px-4">
-          <div className="text-red-600">Post not found</div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-[#0b0b0b] text-white pb-24">
       <NavBar />
-      
-      <main className="max-w-4xl mx-auto py-8 px-4">
-        {error && (
-          <div className="bg-red-50 text-red-600 p-3 rounded-md mb-4">
-            {error}
+      <div className="flex max-w-7xl mx-auto pt-16">
+        {/* Sidebar */}
+        <aside className="hidden md:block fixed top-16 left-0 w-64 h-[calc(100vh-4rem)] bg-[#1a1a1b] text-white pt-4 px-4 overflow-hidden border-r border-gray-800">
+          <div className="space-y-2 text-sm">
+            <SidebarLink icon={FaQuestionCircle} label="Questions" />
+            <SidebarLink icon={FaComments} label="Discussions" />
+            <SidebarLink icon={FaCog} label="Settings" />
           </div>
-        )}
-        
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          {/* Post header */}
-          <div className="p-6 border-b">
-            <h1 className="text-3xl font-bold mb-2">{post.title}</h1>
-            <div className="flex items-center justify-between text-sm text-gray-500">
-              <div>Posted by: {post.user?.display_name || 'Anonymous'}</div>
-              <div>{new Date(post.created_at).toLocaleString()}</div>
-            </div>
-          </div>
-          
-          {/* Post content */}
-          <div className="p-6">
-            <div className="prose max-w-none">
-              {post.content}
-            </div>
-          </div>
-          
-          {/* Disclosed attributes */}
-          {post.disclosed_attributes && Object.keys(post.disclosed_attributes).length > 0 && (
-            <div className="px-6 pb-6 border-t pt-4">
-              <h3 className="text-lg font-semibold mb-3">Verified Attributes</h3>
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(post.disclosed_attributes).map(([key, value]) => (
-                  <div key={key} className="bg-green-50 text-green-700 px-3 py-1 rounded-full text-sm">
-                    <span className="font-medium">{key.replace('_', ' ')}:</span> {String(value)}
+          <hr className="border-gray-700 my-4" />
+          <h3 className="text-md font-semibold mb-2 text-white/80">What’s happening</h3>
+          <PopularTopics />
+        </aside>
+
+        <main className="flex-1 pt-8 px-4 ml-64 relative">
+          {loading ? (
+            <div className="animate-pulse text-gray-500">Loading post...</div>
+          ) : post ? (
+            <div className="space-y-6">
+              <div className="bg-[#1a1a1b] rounded-xl p-6 shadow space-y-4 border border-gray-700">
+                <div className="flex items-center gap-2 text-sm text-gray-400">
+                  <img src="/api/placeholder/32/32" className="w-6 h-6 rounded-full" />
+                  <span className="font-medium">{post.user?.display_name}</span>
+                  <span>• {new Date(post.created_at).toLocaleString()}</span>
+                </div>
+                <h1 className="text-2xl font-extrabold text-white leading-snug">{post.title}</h1>
+                <p className="whitespace-pre-line text-gray-300 text-base leading-relaxed">{post.content}</p>
+
+                {/* 🔻 Add metadata tags here */}
+                {post.disclosed_attributes && (
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    {'age' in post.disclosed_attributes && (
+                      <span className="bg-gray-800 text-sm text-gray-300 px-3 py-1 rounded-full">
+                        age: {post.disclosed_attributes.age}
+                      </span>
+                    )}
+                    {'location' in post.disclosed_attributes && (
+                      <span className="bg-gray-800 text-sm text-gray-300 px-3 py-1 rounded-full">
+                        location: {post.disclosed_attributes.location}
+                      </span>
+                    )}
+                    {post.disclosed_attributes.verified_user && (
+                      <span className="bg-indigo-700 text-sm text-white px-3 py-1 rounded-full">
+                        verified user: true
+                      </span>
+                    )}
+                    {'membership_level' in post.disclosed_attributes && (
+                      <span className="bg-gray-700 text-sm text-indigo-300 px-3 py-1 rounded-full">
+                        membership level: {post.disclosed_attributes.membership_level}
+                      </span>
+                    )}
                   </div>
-                ))}
+                )}
+              </div>
+
+              <div className="mt-10 mb-32">
+                <h2 className="text-lg font-semibold mb-4 text-white/90">All comments</h2>
+                {comments.length === 0 ? (
+                  <div className="text-gray-400">No comments yet.</div>
+                ) : (
+                  <div className="space-y-6">
+                    {comments.map((comment) => (
+                      <div key={comment.comment_id} className="bg-[#1a1a1b] p-4 rounded-lg border border-gray-700">
+                        <div className="text-sm text-gray-400 mb-1">
+                          {comment.user?.display_name} • {new Date(comment.created_at).toLocaleString()}
+                        </div>
+                        <div className="text-white text-base">{comment.content}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
+          ) : (
+            <div className="text-red-500">Post not found.</div>
           )}
-          
-          {/* Comments section */}
-          <div className="border-t px-6 py-4 bg-gray-50">
-            <h3 className="text-xl font-semibold mb-4">Comments</h3>
-            
-            {comments.length === 0 ? (
-              <div className="text-gray-500 py-4">No comments yet.</div>
-            ) : (
-              <div className="space-y-4 mb-6">
-                {comments.map(comment => (
-                  <div key={comment.comment_id} className="bg-white p-4 rounded-md shadow-sm">
-                    <div className="text-sm text-gray-500 mb-1">
-                      {comment.user?.display_name || 'Anonymous'} • {new Date(comment.created_at).toLocaleString()}
-                    </div>
-                    <div>{comment.content}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-            
-            {canComment ? (
-              <div className="mt-6">
-                <textarea
-                  value={commentText}
-                  onChange={e => setCommentText(e.target.value)}
-                  placeholder="Write a comment..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md mb-2"
-                  rows={3}
-                />
-                <button
-                  type="button"
-                  onClick={handleSubmitComment}
-                  disabled={commentLoading || !commentText.trim()}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
-                >
-                  {commentLoading ? 'Submitting...' : 'Submit Comment'}
-                </button>
-              </div>
-            ) : (
-              <div className="mt-6 p-3 bg-yellow-50 text-yellow-700 rounded-md">
-                You cannot comment on this post due to the author&apos;s restrictions.
-              </div>
-            )}
+        </main>
+      </div>
+
+      {/* Comment input fixed at bottom */}
+      {canComment && (
+        <div className="fixed bottom-0 left-64 w-[calc(100%-16rem)] bg-[#1a1a1b] border-t border-gray-700 p-4 z-50">
+          <div className="flex items-center gap-4">
+            <input
+              type="text"
+              placeholder="Write a comment..."
+              className="flex-1 px-4 py-2 rounded-lg bg-[#2a2a2b] border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+            />
+            <button
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-lg disabled:opacity-40"
+              disabled={!commentText.trim() || commentLoading}
+              onClick={handleAddComment}
+            >
+              {commentLoading ? 'Posting...' : 'Post'}
+            </button>
           </div>
         </div>
-      </main>
+      )}
     </div>
   );
-} 
+}
+
+const SidebarLink = ({ icon: Icon, label }: { icon: React.ElementType; label: string }) => (
+  <a href="#" className="flex items-center space-x-4 px-4 py-3 rounded-md hover:bg-gray-800 text-gray-300 hover:text-white transition">
+    <Icon className="w-5 h-5" />
+    <span className="text-base">{label}</span>
+  </a>
+);

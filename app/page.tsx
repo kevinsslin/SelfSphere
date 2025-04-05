@@ -1,72 +1,74 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import NavBar from './components/NavBar';
 import Link from 'next/link';
+import NavBar from './components/NavBar';
+import { motion } from 'framer-motion';
 
 export default function HomePage() {
-  const router = useRouter();
-  
   return (
-    <div className="min-h-screen bg-gray-50">
-      <NavBar />
-      
-      <main className="max-w-5xl mx-auto pt-16 px-4">
-        <div className="text-center mb-16">
-          <h1 className="text-5xl font-bold text-indigo-600 mb-6">SelfSphere</h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            A decentralized discussion platform with Web3 identity verification
-          </p>
-        </div>
-        
-        <div className="grid md:grid-cols-2 gap-8 mb-16">
-          <div className="bg-white p-8 rounded-lg shadow-md">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Verified Identity</h2>
-            <p className="text-gray-600 mb-6">
-              Use Self passport verification to securely share personal attributes without revealing your entire identity.
-            </p>
-            <Link
-              href="/playground"
-              className="inline-block bg-indigo-100 text-indigo-700 px-4 py-2 rounded-md hover:bg-indigo-200 transition"
-            >
-              Try the Playground
-            </Link>
-          </div>
-          
-          <div className="bg-white p-8 rounded-lg shadow-md">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Web3 Rewards</h2>
-            <p className="text-gray-600 mb-6">
-              Earn tokens and NFTs for participating in discussions. First commenters get special rewards!
-            </p>
+    <div className="min-h-screen bg-black text-white overflow-hidden relative">
+      {/* Background Layer */}
+      <div className="absolute inset-0 z-0">
+        <video
+          autoPlay
+          loop
+          muted
+          className="w-full h-full object-cover brightness-[0.2]"
+        >
+          <source src="/cyberpunk-bg.mp4" type="video/mp4" />
+        </video>
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10">
+        <NavBar />
+
+        <main className="flex flex-col items-center justify-center h-screen text-center px-4">
+          <motion.h1
+            className="text-6xl md:text-8xl font-extrabold text-indigo-400 neon-text mb-4"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1.2 }}
+          >
+            SelfSphere
+          </motion.h1>
+
+          <motion.p
+            className="text-lg md:text-xl text-gray-300 max-w-2xl mb-8"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 1 }}
+          >
+            Decentralized identity for Web3 discussions. Powered by ZK Proofs.
+          </motion.p>
+
+          <motion.div
+            className="flex gap-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.8 }}
+          >
             <Link
               href="/forum"
-              className="inline-block bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition"
+              className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-lg rounded-full transition shadow-lg"
             >
-              Join the Forum
-            </Link>
-          </div>
-        </div>
-        
-        <div className="text-center">
-          <p className="text-gray-500 mb-4">Built for ETH Taipei Hackathon</p>
-          <div className="flex justify-center space-x-6">
-            <Link
-              href="/forum"
-              className="text-indigo-600 hover:text-indigo-800"
-            >
-              Forum
+              Enter Forum
             </Link>
             <Link
               href="/playground"
-              className="text-indigo-600 hover:text-indigo-800"
+              className="px-6 py-3 border border-gray-500 hover:border-indigo-400 text-gray-300 hover:text-indigo-300 rounded-full text-lg transition"
             >
-              Playground
+              Try Playground
             </Link>
-          </div>
-        </div>
-      </main>
+          </motion.div>
+        </main>
+      </div>
+
+      <style jsx>{`
+        .neon-text {
+          text-shadow: 0 0 5px #7f5af0, 0 0 10px #7f5af0, 0 0 20px #7f5af0;
+        }
+      `}</style>
     </div>
   );
 }
-

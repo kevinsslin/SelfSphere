@@ -1,6 +1,6 @@
 'use client';
 
-import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { ConnectButton, darkTheme, RainbowKitProvider } from '@rainbow-me/rainbowkit';
 import { useAccount } from 'wagmi';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
@@ -11,13 +11,11 @@ export function ConnectWallet() {
   const [isEditingName, setIsEditingName] = useState(false);
   const [newDisplayName, setNewDisplayName] = useState('');
 
-  // Fetch or create user when wallet connected
   useEffect(() => {
     async function getOrCreateUser() {
       if (!address || !isConnected) return;
 
       try {
-        // Check if user exists
         const { data: existingUser, error } = await supabase
           .from('users')
           .select()
@@ -30,12 +28,10 @@ export function ConnectWallet() {
         }
 
         if (existingUser) {
-          // User exists, load display name
           setDisplayName(existingUser.display_name || formatAddress(address));
           return;
         }
 
-        // User doesn't exist, create new user
         const shortAddress = formatAddress(address);
         const { data: newUser, error: createError } = await supabase
           .from('users')
@@ -62,27 +58,25 @@ export function ConnectWallet() {
     getOrCreateUser();
   }, [address, isConnected]);
 
-  // Function to format address (0x1234...5678)
   const formatAddress = (addr: string): string => {
     if (!addr) return '';
     return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
   };
 
-  // Update user's display name
   const updateDisplayName = async () => {
     if (!address || !newDisplayName.trim()) return;
-    
+
     try {
       const { error } = await supabase
         .from('users')
         .update({ display_name: newDisplayName.trim() })
         .eq('wallet_address', address);
-      
+
       if (error) {
         console.error('Error updating display name:', error);
         return;
       }
-      
+
       setDisplayName(newDisplayName.trim());
       setIsEditingName(false);
     } catch (err) {
@@ -91,7 +85,15 @@ export function ConnectWallet() {
   };
 
   return (
-    <div className="flex items-center space-x-4">
+    <RainbowKitProvider
+    theme={darkTheme({
+      accentColor: '#000000',
+      accentColorForeground: 'white',
+      borderRadius: 'small',
+      fontStack: 'system',
+      overlayBlur: 'large',
+    })}>
+      <div className="flex items-center space-x-4">
       {isConnected && displayName && (
         <div className="flex items-center">
           {isEditingName ? (
@@ -127,7 +129,7 @@ export function ConnectWallet() {
                   setNewDisplayName(displayName);
                   setIsEditingName(true);
                 }}
-                className="text-xs text-gray-500 hover:text-gray-700"
+                className="text-xs text-gray-500 hover:text-gray-300"
               >
                 ✏️
               </button>
@@ -135,7 +137,12 @@ export function ConnectWallet() {
           )}
         </div>
       )}
-      <ConnectButton />
+      <div className="border border-white rounded-md text-white hover:text-black transition px-3 py-1 text-sm font-medium">
+        <ConnectButton 
+          showBalance={false}
+        />
+      </div>
     </div>
+    </RainbowKitProvider>
   );
-} 
+}
