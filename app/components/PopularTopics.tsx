@@ -14,13 +14,13 @@ const topics = [
     category: 'Business & finance · Trending',
     topic: 'Warren Buffett',
     posts: '18.7K posts',
-    trending: false,
+    trending: true,
   },
   {
     category: 'Business & finance · Trending',
     topic: 'Ethereum',
     posts: '181K posts',
-    trending: false,
+    trending: true,
   },
   {
     category: 'Business & finance · Trending',
