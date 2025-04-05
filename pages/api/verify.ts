@@ -7,6 +7,9 @@ import {
 import { kv } from '@vercel/kv';
 import { SelfApp } from '@selfxyz/qrcode';
 
+// import { ethers } from 'ethers';
+// import abi from '../../abi/Post.json';
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method === 'POST') {
         try {
@@ -18,6 +21,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
             const userId = await getUserIdentifier(publicSignals);
             console.log("Extracted userId from verification result:", userId);
+
+            // // Inside your handler function after verification succeeds
+            // const provider = new ethers.JsonRpcProvider("https://alfajores-forno.celo-testnet.org/");
+            // const signer = new ethers.Wallet(process.env.PRIVATE_KEY!, provider);
+            // const contractAddress = process.env.CONTRACT_ADDRESS!;
+            // const contract = new ethers.Contract(contractAddress, abi.abi, signer);
+            
+            // // Now you can interact with the contract
+            // // Example: await contract.verifySelfProof(...);
+            // const tx = await contract.verifySelfProof(proof, publicSignals);
+            // const receipt = await tx.wait();
+            // console.log("Verification transaction mined:", {
+            //     hash: tx.hash,
+            //     blockNumber: receipt.blockNumber
+            // });
 
             // Default options
             let minimumAge;
@@ -76,7 +94,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             
             const configuredVerifier = new SelfBackendVerifier(
                 "self-sphere",
-                "https://self-sphere.vercel.app",
+                "https://6317-111-235-226-130.ngrok-free.app",
+                // "https://self-sphere.vercel.app",
                 "uuid",
                 true // This is to enable the mock passport
             );
