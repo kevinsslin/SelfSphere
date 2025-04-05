@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS comments (
   user_id UUID REFERENCES users(user_id) ON DELETE SET NULL,
   content TEXT,
   likes_count INTEGER DEFAULT 0,
+  status VARCHAR(20) DEFAULT 'pending', -- comment status: pending, posted, failed
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now()),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now())
 );
