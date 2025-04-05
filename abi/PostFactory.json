@@ -35,6 +35,16 @@
         "internalType": "uint256"
       },
       {
+        "name": "_name",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "_symbol",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
         "name": "_gender",
         "type": "string",
         "internalType": "string"

@@ -11,6 +11,7 @@ import { supabase } from '../../lib/supabase';
 import { ethers } from 'ethers';
 import abi from '../../abi/PostFactory.json';
 import { RESTRICTIONS } from '../../app/utils/constants';
+import { calculateAge } from '../../app/utils/ageCalculator';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method === 'POST') {
@@ -154,25 +155,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 if (disclosedAttributes.date_of_birth && result.credentialSubject.date_of_birth) {
                     attributesWithValues.date_of_birth = result.credentialSubject.date_of_birth as string;
                     
-                    // If date of birth is disclosed, calculate and include age
-                    // Convert date format from DD-MM-YY to YYYY-MM-DD
-                    const [day, month, year] = attributesWithValues.date_of_birth.split('-');
-                    // Assume year is 20xx
-                    const fullYear = Number.parseInt(year) < 50 ? `20${year}` : `19${year}`;
-                    const formattedDate = `${fullYear}-${month}-${day}`;
-                    
-                    const birthDate = new Date(formattedDate);
-                    const today = new Date();
-                    
-                    // Calculate age correctly
-                    let age = today.getFullYear() - birthDate.getFullYear();
-                    const monthDiff = today.getMonth() - birthDate.getMonth();
-                    
-                    // Subtract 1 if birthday hasn't passed yet
-                    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-                        age--;
-                    }
-                    
+                    // Calculate age using the utility function
+                    const age = calculateAge(attributesWithValues.date_of_birth);
                     console.log("Calculated age:", age);
                     attributesWithValues.age = age;
                 }
@@ -237,7 +221,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                         // Call createPost function
                         const tx = await contract.createPost(
                             // hashEndpointWithScope("https://self-sphere.vercel.app/", "SelfSphere"),
-                            hashEndpointWithScope("https://6317-111-235-226-130.ngrok-free.app/", "SelfSphere"),
+                            hashEndpointWithScope("https://6317-111-235-226-130.ngrok-free.app/", "self-sphere-comment"),
                             olderThanEnabled,
                             olderThan,
                             gender,
@@ -248,7 +232,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                         const receipt = await tx.wait();
                         
                         // Get the PostCreated event from the receipt
-                        const event = receipt.logs.find(log => 
+                        const event = receipt.logs.find((log: ethers.EventLog) => 
                             log.fragment?.name === 'PostCreated'
                         );
                         
