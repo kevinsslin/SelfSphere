@@ -41,9 +41,45 @@
         "name": "_ofacEnabled",
         "type": "bool[3]",
         "internalType": "bool[3]"
+      },
+      {
+        "name": "_gender",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "_nationality",
+        "type": "string",
+        "internalType": "string"
       }
     ],
     "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "gender",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "nationality",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -108,6 +144,46 @@
             "internalType": "uint256[21]"
           }
         ]
+      },
+      {
+        "name": "age",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "verifySelfProof",
+    "inputs": [
+      {
+        "name": "proof",
+        "type": "tuple",
+        "internalType": "struct IVcAndDiscloseCircuitVerifier.VcAndDiscloseProof",
+        "components": [
+          {
+            "name": "a",
+            "type": "uint256[2]",
+            "internalType": "uint256[2]"
+          },
+          {
+            "name": "b",
+            "type": "uint256[2][2]",
+            "internalType": "uint256[2][2]"
+          },
+          {
+            "name": "c",
+            "type": "uint256[2]",
+            "internalType": "uint256[2]"
+          },
+          {
+            "name": "pubSignals",
+            "type": "uint256[21]",
+            "internalType": "uint256[21]"
+          }
+        ]
       }
     ],
     "outputs": [],
@@ -134,7 +210,7 @@
   },
   {
     "type": "error",
-    "name": "INSUFFICIENT_CHARCODE_LEN",
+    "name": "InvalidAge",
     "inputs": []
   },
   {
@@ -144,32 +220,17 @@
   },
   {
     "type": "error",
-    "name": "InvalidDateLength",
+    "name": "InvalidGender",
     "inputs": []
   },
   {
     "type": "error",
-    "name": "InvalidDayRange",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "InvalidFieldElement",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "InvalidMonthRange",
+    "name": "InvalidNationality",
     "inputs": []
   },
   {
     "type": "error",
     "name": "InvalidScope",
-    "inputs": []
-  },
-  {
-    "type": "error",
-    "name": "InvalidYearRange",
     "inputs": []
   },
   {

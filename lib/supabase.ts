@@ -9,12 +9,21 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Type definitions for tables based on the PRD
+// Type definitions matching the database schema exactly
 export type User = {
   user_id: string;
   wallet_address: string;
   display_name?: string;
   avatar_url?: string;
+  nationality?: string;
+  gender?: string;
+  date_of_birth?: string;
+  issuing_state?: string;
+  name?: string;
+  passport_number?: string;
+  expiry_date?: string;
+  passport_verified?: boolean;
+  verification_time?: string;
   created_at?: string;
   updated_at?: string;
 };
@@ -22,11 +31,14 @@ export type User = {
 export type Post = {
   post_id: string;
   user_id: string;
+  post_contract_address?: string;
   title: string;
   content: string;
   anonymity_flag: boolean;
   allowed_viewers?: Record<string, unknown>;
   allowed_commenters?: Record<string, unknown>;
+  disclosed_attributes?: Record<string, boolean>;
+  status: 'pending' | 'posted' | 'cancelled';
   likes_count: number;
   reward_enabled: boolean;
   reward_type?: number;
@@ -43,6 +55,14 @@ export type Comment = {
   likes_count: number;
   created_at?: string;
   updated_at?: string;
+};
+
+export type Like = {
+  like_id: string;
+  user_id: string;
+  target_id: string;
+  target_type: 'Post' | 'Comment';
+  created_at?: string;
 };
 
 export type Reward = {
