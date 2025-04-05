@@ -23,26 +23,6 @@ type Post = {
   disclosed_attributes?: Record<string, string | number | boolean>;
 };
 
-// TODO: remove this mock post
-const mockPost = {
-  post_id: "12345",
-  title: "My First Post in SelfSphere",
-  content: "This is a sample post content that demonstrates how the PostCard component will look with some text. It should be long enough to test the line-clamp functionality.",
-  user_id: "user_67890",
-  created_at: "2023-10-15T14:30:00Z",
-  likes_count: 42,
-  comments_count: 7,
-  user: {
-    display_name: "JohnDoe123"
-  },
-  disclosed_attributes: {
-    age: 28,
-    location: "New York",
-    verified_user: true,
-    membership_level: "premium"
-  }
-};
-
 export default function ForumPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -118,13 +98,6 @@ export default function ForumPage() {
               ))}
             </div>
           )}
-
-          {/* Optional: mockPost preview */}
-          <div className="grid gap-6 mt-6">
-            <PostCard key="mock-1" post={mockPost} />
-            <PostCard key="mock-2" post={mockPost} />
-            <PostCard key="mock-3" post={mockPost} />
-          </div>
 
           {/* Sticky Create Post Button at the Bottom of Content */}
           <div className="sticky bottom-6 flex justify-center mt-10 z-10">
