@@ -1,12 +1,23 @@
 -- Create UUID extension if not exists
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Users Table - stores user basic info and wallet address
+-- Users Table - stores user basic info, wallet address and passport credentials
 CREATE TABLE IF NOT EXISTS users (
   user_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   wallet_address VARCHAR(255) UNIQUE NOT NULL,
   display_name VARCHAR(100),
   avatar_url VARCHAR(255),
+  -- Passport verification data
+  nationality VARCHAR(100),
+  gender VARCHAR(10),
+  date_of_birth VARCHAR(20),
+  issuing_state VARCHAR(100),
+  name VARCHAR(255),
+  passport_number VARCHAR(50),
+  expiry_date VARCHAR(20),
+  passport_verified BOOLEAN DEFAULT false,
+  verification_time TIMESTAMP WITH TIME ZONE,
+  -- Timestamps
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now()),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now())
 );
@@ -20,6 +31,8 @@ CREATE TABLE IF NOT EXISTS posts (
   anonymity_flag BOOLEAN DEFAULT false,
   allowed_viewers JSONB, -- e.g., {"nationality": "Taiwan", "min_age": 20}
   allowed_commenters JSONB, -- comment permission rules
+  disclosed_attributes JSONB, -- User-disclosed passport attributes, e.g. {"nationality": true, "gender": true}
+  status VARCHAR(20) DEFAULT 'pending', -- post status: pending, posted, cancelled
   likes_count INTEGER DEFAULT 0,
   reward_enabled BOOLEAN DEFAULT false,
   reward_type INTEGER, -- 1: first commenter gets token, 2: all commenters get NFT

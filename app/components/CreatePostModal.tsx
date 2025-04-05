@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { logo } from '../content/playgroundAppLogo';
 import { countryCodes } from '@selfxyz/core';
 import { PASSPORT_ATTRIBUTES, REWARD_TYPES, RESTRICTIONS, OPERATION_TYPES } from '../utils/constants';
+import type { DisclosedAttributes } from '../utils/types';
 
 type CreatePostModalProps = {
   onClose: () => void;
@@ -53,99 +54,6 @@ export default function CreatePostModal({ onClose }: CreatePostModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [countrySelectionError, setCountrySelectionError] = useState<string | null>(null);
 
-  // Generate a unique user ID for the QR code when needed
-  useEffect(() => {
-    if (currentStep === 5 && !userId) {
-      setUserId(uuidv4());
-    }
-  }, [currentStep, userId]);
-
-  // Function to handle creating a post after verification
-  const handleCreatePost = async () => {
-    try {
-      setIsSubmitting(true);
-      
-      if (!address) {
-        setError('Please connect your wallet first');
-        return;
-      }
-      
-      // Get user ID from wallet address
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('user_id')
-        .eq('wallet_address', address)
-        .single();
-      
-      if (userError) {
-        throw new Error('User not found');
-      }
-      
-      // Prepare restrictions based on enabled restrictions
-      const restrictions: Record<string, unknown> = {};
-      
-      if (postData.commentRestrictions.enabled[RESTRICTIONS.NATIONALITY]) {
-        restrictions.nationality = {
-          mode: postData.commentRestrictions.nationality.mode,
-          countries: postData.commentRestrictions.nationality.countries
-        };
-      }
-      
-      if (postData.commentRestrictions.enabled[RESTRICTIONS.GENDER] && postData.commentRestrictions.gender) {
-        restrictions.gender = postData.commentRestrictions.gender;
-      }
-      
-      if (postData.commentRestrictions.enabled[RESTRICTIONS.AGE]) {
-        restrictions.minimumAge = postData.commentRestrictions.minimumAge;
-      }
-      
-      if (postData.commentRestrictions.enabled[RESTRICTIONS.ISSUING_STATE] && postData.commentRestrictions.issuing_state) {
-        restrictions.issuing_state = postData.commentRestrictions.issuing_state;
-      }
-
-      // Prepare post data
-      const finalPostData = {
-        title: postData.title,
-        content: postData.content,
-        user_id: userData.user_id,
-        allowed_commenters: Object.keys(restrictions).length > 0 ? restrictions : null,
-        disclosed_attributes: Object.keys(postData.disclosedAttributes)
-          .filter(key => postData.disclosedAttributes[key])
-          .reduce((acc, key) => {
-            acc[key] = true;
-            return acc;
-          }, {} as Record<string, boolean>),
-        reward_enabled: postData.reward.enabled,
-        reward_type: postData.reward.enabled ? postData.reward.type : null
-      };
-      
-      // Send post data to the API
-      const response = await fetch('/api/submitVerifiedPost', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          postData: finalPostData,
-          verificationResult: { isValid: true }
-        }),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create post');
-      }
-      
-      // Close modal after successful post creation
-      onClose();
-    } catch (err) {
-      console.error('Error creating post:', err);
-      setError('Failed to create post. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const handleNext = () => {
     if (currentStep === 1 && (!postData.title || !postData.content)) {
       setError('Please fill in both title and content');
@@ -153,9 +61,14 @@ export default function CreatePostModal({ onClose }: CreatePostModalProps) {
     }
     
     if (currentStep === 4) {
-      // Generate user ID for verification and move to QR code step
-      setUserId(uuidv4());
-      setCurrentStep(prev => prev + 1);
+      console.log('Creating pending post');
+      // 创建pending状态的帖子并获取帖子ID用于后续验证
+      createPendingPost().then(() => {
+        setCurrentStep(prev => prev + 1);
+      }).catch(err => {
+        console.error('Error creating pending post:', err);
+        setError('Failed to prepare post for verification. Please try again.');
+      });
       return;
     }
     
@@ -279,6 +192,134 @@ export default function CreatePostModal({ onClose }: CreatePostModalProps) {
         [key]: !prev.disclosedAttributes[key]
       }
     }));
+  };
+
+  // 创建pending状态的帖子
+  const createPendingPost = async () => {
+    if (!address) {
+      throw new Error('Please connect your wallet first');
+    }
+    
+    // Get user ID
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('user_id')
+      .eq('wallet_address', address)
+      .single();
+    
+    if (userError) {
+      // Create new user if not exists
+      if (userError.code === 'PGRST116') {
+        const { data: newUser, error: createError } = await supabase
+          .from('users')
+          .insert([{ wallet_address: address }])
+          .select()
+          .single();
+          
+        if (createError) {
+          throw new Error(`Failed to create user: ${createError.message}`);
+        }
+        
+        const userId = newUser.user_id;
+        console.log('New user created, creating post with userId:', userId);
+        return await createPostWithUserId(userId);
+      }
+      throw new Error(`Error fetching user: ${userError.message}`);
+    }
+    
+    console.log('User found, creating post with userId:', userData.user_id);
+    // Create post with existing user ID
+    return await createPostWithUserId(userData.user_id);
+  };
+  
+  // Create pending post with user ID
+  const createPostWithUserId = async (userId: string) => {
+    try {
+      // Check for existing pending posts
+      console.log('Checking existing posts for userId:', userId);
+      const { data: existingPosts, error: checkError } = await supabase
+        .from('posts')
+        .select('post_id')
+        .eq('user_id', userId)
+        .eq('status', 'pending')
+        .limit(1);
+      
+      if (checkError) {
+        throw new Error(`Error checking existing posts: ${checkError.message}`);
+      }
+      
+      // Update existing pending post to failed status
+      if (existingPosts && existingPosts.length > 0) {
+        const { error: updateError } = await supabase
+          .from('posts')
+          .update({ status: 'failed' })
+          .eq('post_id', existingPosts[0].post_id);
+          
+        if (updateError) {
+          throw new Error(`Failed to update existing post status: ${updateError.message}`);
+        }
+        
+        console.log('Updated existing pending post to failed status');
+      }
+      
+      // Prepare restrictions
+      const restrictions: Record<string, unknown> = {};
+      
+      if (postData.commentRestrictions.enabled[RESTRICTIONS.NATIONALITY]) {
+        restrictions.nationality = {
+          mode: postData.commentRestrictions.nationality.mode,
+          countries: postData.commentRestrictions.nationality.countries
+        };
+      }
+      
+      if (postData.commentRestrictions.enabled[RESTRICTIONS.GENDER] && postData.commentRestrictions.gender) {
+        restrictions.gender = postData.commentRestrictions.gender;
+      }
+      
+      if (postData.commentRestrictions.enabled[RESTRICTIONS.AGE]) {
+        restrictions.minimumAge = postData.commentRestrictions.minimumAge;
+      }
+      
+      if (postData.commentRestrictions.enabled[RESTRICTIONS.ISSUING_STATE] && postData.commentRestrictions.issuing_state) {
+        restrictions.issuing_state = postData.commentRestrictions.issuing_state;
+      }
+      
+      // Prepare post data
+      const postDataToInsert = {
+        title: postData.title,
+        content: postData.content,
+        user_id: userId,
+        allowed_commenters: Object.keys(restrictions).length > 0 ? restrictions : null,
+        anonymity_flag: false, // Default to non-anonymous
+        disclosed_attributes: postData.disclosedAttributes, // Store user-selected attributes (boolean values only)
+        status: 'pending', // Set status to pending
+        reward_enabled: postData.reward.enabled,
+        reward_type: postData.reward.enabled ? postData.reward.type : null
+      };
+
+      console.log('Creating post with data:', postDataToInsert);
+      
+      // Create post
+      const { data, error } = await supabase
+        .from('posts')
+        .insert([postDataToInsert])
+        .select()
+        .single();
+      
+      if (error) {
+        throw new Error(`Failed to create post: ${error.message}`);
+      }
+      
+      console.log('Post created successfully:', data);
+
+      // Set post ID as QR code userId
+      setUserId(data.post_id); // important: set post ID as QR code userId
+      console.log('Created pending post:', data);
+      return data.post_id;
+    } catch (error) {
+      console.error('Error in createPostWithUserId:', error);
+      throw error;
+    }
   };
 
   return (
@@ -646,8 +687,8 @@ export default function CreatePostModal({ onClose }: CreatePostModalProps) {
                 <SelfQRcodeWrapper
                   selfApp={new SelfAppBuilder({
                     appName: "SelfSphere",
-                    scope: "self-sphere",
-                    endpoint: "/api/verify",
+                    scope: "self-sphere-post",
+                    endpoint: "https://self-sphere.vercel.app/api/verify-post",
                     logoBase64: logo,
                     userId,
                     disclosures: {
@@ -662,7 +703,10 @@ export default function CreatePostModal({ onClose }: CreatePostModalProps) {
                     devMode: true
                   } as Partial<SelfApp>).build()}
                   onSuccess={() => {
-                    handleCreatePost();
+                    console.log('Verification successful, post published');
+                    onClose();
+                    // Reload the page to show the newly created post
+                    window.location.reload();
                   }}
                   darkMode={false}
                 />
@@ -765,4 +809,4 @@ export default function CreatePostModal({ onClose }: CreatePostModalProps) {
       )}
     </div>
   );
-} 
+}

@@ -5,13 +5,26 @@ export type VerificationResult = {
   credentialSubject?: Record<string, unknown>;
 };
 
+// Disclosed attribute values type
+export type DisclosedAttributes = {
+  nationality?: string;
+  gender?: string;
+  date_of_birth?: string;
+  age?: number;
+  issuing_state?: string;
+  name?: string;
+  expiry_date?: string;
+  [key: string]: unknown;
+};
+
 // Post related types
 export type PostData = {
   title: string;
   content: string;
   user_id: string;
   allowed_commenters: Record<string, unknown> | null;
-  disclosed_attributes: Record<string, boolean>;
+  anonymity_flag?: boolean;
+  disclosed_attributes: DisclosedAttributes;
   reward_enabled: boolean;
   reward_type: number | null;
 };
