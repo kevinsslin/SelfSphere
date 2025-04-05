@@ -9,14 +9,12 @@ export default function HomePage() {
     <div className="min-h-screen bg-black text-white overflow-hidden relative">
       {/* Background Layer */}
       <div className="absolute inset-0 z-0">
-        <video
-          autoPlay
-          loop
-          muted
+        <img
+          src="/front-page.jpg"
+          alt="background"
           className="w-full h-full object-cover brightness-[0.2]"
-        >
+        />
           <source src="/cyberpunk-bg.mp4" type="video/mp4" />
-        </video>
       </div>
 
       {/* Content */}
