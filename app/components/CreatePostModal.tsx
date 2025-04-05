@@ -1,14 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAccount } from 'wagmi';
 import { supabase } from '../../lib/supabase';
 import SelfQRcodeWrapper, { type SelfApp, SelfAppBuilder } from '@selfxyz/qrcode';
-import { v4 as uuidv4 } from 'uuid';
 import { logo } from '../content/playgroundAppLogo';
 import { countryCodes } from '@selfxyz/core';
-import { PASSPORT_ATTRIBUTES, REWARD_TYPES, RESTRICTIONS, OPERATION_TYPES } from '../utils/constants';
-import type { DisclosedAttributes } from '../utils/types';
+import { PASSPORT_ATTRIBUTES, RESTRICTIONS } from '../utils/constants';
 
 type CreatePostModalProps = {
   onClose: () => void;
@@ -37,11 +35,8 @@ export default function CreatePostModal({ onClose }: CreatePostModalProps) {
       minimumAge: 18,
       issuing_state: ''
     },
-    reward: {
-      enabled: false,
-      type: 1,
-      amount: '1'
-    }
+    token_name: '',
+    token_symbol: ''
   });
   
   const [userId, setUserId] = useState<string | null>(null);
@@ -289,8 +284,8 @@ export default function CreatePostModal({ onClose }: CreatePostModalProps) {
         anonymity_flag: false,
         disclosed_attributes: postData.disclosedAttributes,
         status: 'pending',
-        reward_enabled: postData.reward.enabled,
-        reward_type: postData.reward.enabled ? postData.reward.type : null
+        token_name: postData.token_name,
+        token_symbol: postData.token_symbol
       };
 
       console.log('Creating post with data:', postDataToInsert);
@@ -578,68 +573,44 @@ export default function CreatePostModal({ onClose }: CreatePostModalProps) {
         
         {/* Step 4: Reward Settings */}
         {currentStep === 4 && (
-          <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Reward Settings</h3>
-            <div className="mb-4">
-              <div className="flex items-center">
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium text-black">Reward Settings</h3>
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="token-name" className="block text-sm font-medium text-gray-700 mb-1">
+                  Reward Token Name
+                </label>
                 <input
-                  type="checkbox"
-                  id="enable-rewards"
-                  checked={postData.reward.enabled}
-                  onChange={e => setPostData(prev => ({ 
+                  id="token-name"
+                  type="text"
+                  value={postData.token_name}
+                  onChange={(e) => setPostData(prev => ({ 
                     ...prev, 
-                    reward: { ...prev.reward, enabled: e.target.checked } 
+                    token_name: e.target.value 
                   }))}
-                  className="mr-2"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-800"
+                  placeholder="Enter token name"
+                  required
                 />
-                <label htmlFor="enable-rewards" className="text-gray-800">Enable rewards for this post</label>
+              </div>
+              <div>
+                <label htmlFor="token-symbol" className="block text-sm font-medium text-gray-700 mb-1">
+                  Reward Token Symbol
+                </label>
+                <input
+                  id="token-symbol"
+                  type="text"
+                  value={postData.token_symbol}
+                  onChange={(e) => setPostData(prev => ({ 
+                    ...prev, 
+                    token_symbol: e.target.value 
+                  }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-800"
+                  placeholder="Enter token symbol"
+                  required
+                />
               </div>
             </div>
-            
-            {postData.reward.enabled && (
-              <>
-                <div className="mb-4">
-                  <label htmlFor="reward-type" className="block text-sm font-medium text-gray-700 mb-1">
-                    Reward Type
-                  </label>
-                  <select
-                    id="reward-type"
-                    value={postData.reward.type}
-                    onChange={e => setPostData(prev => ({ 
-                      ...prev, 
-                      reward: { ...prev.reward, type: Number(e.target.value) } 
-                    }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-800"
-                  >
-                    {REWARD_TYPES.map(type => (
-                      <option key={type.id} value={type.id}>
-                        {type.name}
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {REWARD_TYPES.find(t => t.id === postData.reward.type)?.description}
-                  </p>
-                </div>
-                
-                <div className="mb-4">
-                  <label htmlFor="reward-amount" className="block text-sm font-medium text-gray-700 mb-1">
-                    Reward Amount
-                  </label>
-                  <input
-                    type="number"
-                    id="reward-amount"
-                    min="1"
-                    value={postData.reward.amount}
-                    onChange={e => setPostData(prev => ({ 
-                      ...prev, 
-                      reward: { ...prev.reward, amount: e.target.value } 
-                    }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-800"
-                  />
-                </div>
-              </>
-            )}
           </div>
         )}
         

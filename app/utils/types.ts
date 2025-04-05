@@ -23,13 +23,28 @@ export interface CommentRestrictions {
 }
 
 export interface PostData {
+    post_id: string;
+    user_id: string;
     title: string;
     content: string;
-    disclosedAttributes: DisclosedAttributes;
-    disclosedMinimumAge: number;
-    commentRestrictions: CommentRestrictions;
-    reward_enabled?: boolean;
-    reward_type?: string;
+    status: 'pending' | 'posted' | 'rejected';
+    created_at: string;
+    updated_at: string;
+    disclosed_attributes: Record<string, boolean>;
+    commentRestrictions: {
+        enabled: {
+            [RESTRICTIONS.AGE]: boolean;
+            [RESTRICTIONS.GENDER]: boolean;
+            [RESTRICTIONS.NATIONALITY]: boolean;
+        };
+        minimumAge: number;
+        gender: string;
+        nationality: {
+            countries: string[];
+        };
+    };
+    token_name: string;
+    token_symbol: string;
 }
 
 export interface CommentData {
