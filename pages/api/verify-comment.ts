@@ -63,7 +63,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             // Configure verifier based on post restrictions
             const configuredVerifier = new SelfBackendVerifier(
                 "self-sphere-comment",
-                "https://6317-111-235-226-130.ngrok-free.app",
+                process.env.NEXT_PUBLIC_API_ENDPOINT as string,
                 "uuid",
                 true // Enable mock passport
             );
@@ -73,7 +73,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 configuredVerifier.setMinimumAge(post.allowed_commenters.minimumAge);
                 console.log("Set minimum age:", post.allowed_commenters.minimumAge);
             }
-            // TODO
+
             if (post.allowed_commenters?.nationality?.countries?.length > 0) {
                 configuredVerifier.setNationality(
                     post.allowed_commenters.nationality.countries[0] as Country3LetterCode

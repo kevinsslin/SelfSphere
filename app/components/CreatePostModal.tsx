@@ -629,8 +629,7 @@ export default function CreatePostModal({ onClose }: CreatePostModalProps) {
                   selfApp={new SelfAppBuilder({
                     appName: "SelfSphere",
                     scope: "self-sphere-post",
-                    endpoint: "https://self-sphere.vercel.app/api/verify-post",
-                    //endpoint: "https://6317-111-235-226-130.ngrok-free.app/api/verify-post",
+                    endpoint: `${process.env.NEXT_PUBLIC_API_ENDPOINT}/api/verify-post`,
                     logoBase64: logo,
                     userId,
                     disclosures: {

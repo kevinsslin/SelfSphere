@@ -133,7 +133,8 @@ export default function PostPage() {
         .from('comments')
         .select('*, user:users(display_name)')
         .eq('post_id', postId)
-        .order('created_at');
+        .eq('status', 'posted')
+        .order('created_at', { ascending: false });
       setComments(updatedComments || []);
       setCommentText('');
       setShowVerification(false);
@@ -228,7 +229,7 @@ export default function PostPage() {
                 selfApp={new SelfAppBuilder({
                   appName: 'SelfSphere',
                   scope: 'self-sphere-comment',
-                  endpoint: 'https://self-sphere.vercel.app/api/verify-comment',
+                  endpoint: `${process.env.NEXT_PUBLIC_API_ENDPOINT}/api/verify-comment`,
                   logoBase64: logo,
                   userId: commentId,
                   disclosures: {

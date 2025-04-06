@@ -102,10 +102,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 console.log("No postId found in verification result, using default options");
             }
             
+            if (!process.env.NEXT_PUBLIC_API_ENDPOINT) {
+                throw new Error('API_ENDPOINT environment variable is not set');
+            }
+
             const configuredVerifier = new SelfBackendVerifier(
                 "self-sphere-post",
-                //"https://6317-111-235-226-130.ngrok-free.app",
-                "https://self-sphere.vercel.app",
+                process.env.NEXT_PUBLIC_API_ENDPOINT,
                 "uuid",
                 true // This is to enable the mock passport
             );
@@ -184,7 +187,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     .eq('post_id', postId);
 
                 // On-chain interaction
-                const provider = new ethers.JsonRpcProvider("https://alfajores-forno.celo-testnet.org/");
+                if (!process.env.NEXT_PUBLIC_CELO_RPC) {
+                    throw new Error('CELO_RPC environment variable is not set');
+                }
+                const provider = new ethers.JsonRpcProvider(process.env.NEXT_PUBLIC_CELO_RPC);
                 const privateKey = process.env.PRIVATE_KEY;
                 const contractAddress = process.env.POST_FACTORY_ADDRESS;
                 
@@ -194,46 +200,52 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     const contract = new ethers.Contract(contractAddress, abi, signer);
                     
                     try {
-                        // Extract age and gender restrictions from post data with default values
-                        const defaultRestrictions = {
-                            enabled: {
-                                [RESTRICTIONS.AGE]: false,
-                                [RESTRICTIONS.GENDER]: false,
-                                [RESTRICTIONS.NATIONALITY]: false
-                            },
-                            minimumAge: 0,
-                            gender: "",
-                            nationality: {
-                                countries: []
-                            }
-                        };
-
-                        const restrictions = pendingPost.allowed_commenters || defaultRestrictions;
+                        // Extract the commenter restrictions set by the poster
+                        const allowedCommenters = pendingPost.allowed_commenters || {};
+                        console.log("Post allowed_commenters:", allowedCommenters);
                         
-                        const olderThanEnabled = restrictions.enabled[RESTRICTIONS.AGE];
-                        const olderThan = restrictions.minimumAge || 0;
-                        const gender = restrictions.enabled[RESTRICTIONS.GENDER] ? 
-                            restrictions.gender : "";
-                        const nationality = restrictions.enabled[RESTRICTIONS.NATIONALITY] && 
-                            restrictions.nationality?.countries?.length > 0 ?
-                            restrictions.nationality.countries[0] : "";
+                        // Determine age restriction
+                        let ageRestrictionEnabled = false;
+                        let minimumAgeRequired = 0;
+                        
+                        if (allowedCommenters.minimumAge && allowedCommenters.minimumAge > 0) {
+                            ageRestrictionEnabled = true;
+                            minimumAgeRequired = allowedCommenters.minimumAge;
+                        }
+                        
+                        // Determine gender restriction
+                        const genderRestriction = allowedCommenters.gender || "";
+                        
+                        // Determine nationality restriction
+                        let nationalityRestriction = "";
+                        if (allowedCommenters.nationality && 
+                            allowedCommenters.nationality.mode === 'include' && 
+                            allowedCommenters.nationality.countries && 
+                            allowedCommenters.nationality.countries.length > 0) {
+                            nationalityRestriction = allowedCommenters.nationality.countries[0];
+                        }
+                        
+                        console.log("Using comment restrictions for post creation:", {
+                            ageRestrictionEnabled,
+                            minimumAgeRequired,
+                            genderRestriction,
+                            nationalityRestriction
+                        });
 
-                        // Call createPost function
+                        // Call createPost function with the commenter restrictions
                         const tx = await contract.createPost(
-                            hashEndpointWithScope("https://6317-111-235-226-130.ngrok-free.app/", "self-sphere-comment"),
-                            olderThanEnabled,
-                            olderThan,
+                            hashEndpointWithScope(
+                                process.env.NEXT_PUBLIC_API_ENDPOINT || "", 
+                                "self-sphere-comment"
+                            ),
+                            ageRestrictionEnabled,
+                            minimumAgeRequired,
                             pendingPost.token_name || "",
                             pendingPost.token_symbol || "",
-                            gender,
-                            nationality
+                            genderRestriction,
+                            nationalityRestriction
                         );
 
-                        console.log(
-                            "gender", gender,
-                            "nationality", nationality
-                        );
-                        
                         // Wait for transaction to be mined
                         const receipt = await tx.wait();
                         
