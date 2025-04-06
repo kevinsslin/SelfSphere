@@ -94,21 +94,34 @@ export default function PostPage() {
     if (!commentText.trim()) return;
     setCommentLoading(true);
     try {
-      const { data: userData } = await supabase
+      const { data: userData, error: userError } = await supabase
         .from('users')
         .select('user_id')
         .eq('wallet_address', address)
         .single();
-      const { data: newComment } = await supabase
+
+      if (userError || !userData) {
+        console.error('Error fetching user data:', userError);
+        throw new Error('User not found');
+      }
+
+      const { data: newComment, error: commentError } = await supabase
         .from('comments')
         .insert([{ post_id: postId, content: commentText, user_id: userData.user_id, status: 'pending' }])
         .select()
         .single();
+
+      if (commentError || !newComment) {
+        console.error('Error creating comment:', commentError);
+        throw new Error('Failed to create comment');
+      }
+
       setCommentId(newComment.comment_id);
       setShowQRCode(true);
       setShowVerification(true);
     } catch (err) {
-      console.error(err);
+      console.error('Error in handleAddComment:', err);
+      // TODO: Add user feedback for error
       setCommentLoading(false);
     }
   };
