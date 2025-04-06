@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import { supabase } from '../../../../lib/supabase';
-import type { Post, Comment } from '../../../../lib/supabase';
+import type { Post, Comment, Like } from '../../../../lib/supabase';
 import NavBar from '../../../components/NavBar';
 import SelfQRcodeWrapper from '@selfxyz/qrcode';
 import type { SelfApp } from '@selfxyz/qrcode';
@@ -12,8 +12,9 @@ import { SelfAppBuilder } from '@selfxyz/qrcode';
 import { v4 as uuidv4 } from 'uuid';
 import { logo } from '../../../content/playgroundAppLogo';
 import PopularTopics from '../../../components/PopularTopics';
-import { FaQuestionCircle, FaComments, FaCog, FaDollarSign } from 'react-icons/fa';
+import { FaQuestionCircle, FaComments, FaCog, FaDollarSign, FaHeart, FaRegHeart } from 'react-icons/fa';
 import Link from 'next/link';
+import toast from 'react-hot-toast';
 
 interface PostWithUser extends Post {
   user?: { display_name: string };
@@ -43,6 +44,11 @@ export default function PostPage() {
   const [showVerification, setShowVerification] = useState(false);
   const [commentId, setCommentId] = useState<string>('');
   const [showQRCode, setShowQRCode] = useState(false);
+  const [rewardLoading, setRewardLoading] = useState<{[key: string]: boolean}>({});
+  const [likeLoading, setLikeLoading] = useState(false);
+  const [hasLiked, setHasLiked] = useState(false);
+  const [likesCount, setLikesCount] = useState(0);
+  const [userId, setUserId] = useState<string | null>(null);
 
   const fetchPostAndComments = useCallback(async () => {
     if (!postId) return;
@@ -54,19 +60,23 @@ export default function PostPage() {
         .eq('post_id', postId)
         .single();
       setPost(postData);
+      
+      if (postData) {
+        setLikesCount(postData.likes_count || 0);
+      }
 
       if (!postData) throw new Error('Post not found');
 
       const { data: userWalletData } = await supabase
         .from('users')
-        .select('wallet_address')
+        .select('wallet_address, user_id')
         .eq('user_id', postData.user_id)
         .single();
 
       // Compare wallet addresses to determine if current user is the author
       console.log("User Wallet Data", userWalletData?.wallet_address);
       console.log("Current User Address", address);
-      if (userWalletData?.wallet_address == address) {
+      if (userWalletData?.wallet_address === address) {
         setAuthor(true);
       } else {
         setAuthor(false);
@@ -81,6 +91,30 @@ export default function PostPage() {
 
       setComments(commentsData || []);
       setCanComment(true);
+      
+      // Find current user ID based on wallet address
+      if (address) {
+        const { data: currentUser } = await supabase
+          .from('users')
+          .select('user_id')
+          .eq('wallet_address', address)
+          .single();
+          
+        if (currentUser) {
+          setUserId(currentUser.user_id);
+          
+          // Check if user has liked this post
+          const { data: existingLike } = await supabase
+            .from('likes')
+            .select('like_id')
+            .eq('user_id', currentUser.user_id)
+            .eq('target_id', postId)
+            .eq('target_type', 'Post')
+            .single();
+            
+          setHasLiked(!!existingLike);
+        }
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -146,6 +180,93 @@ export default function PostPage() {
     }
   };
 
+  const handleRewardComment = async (comment: CommentWithUser) => {
+    if (!comment.user_id || !postId) return;
+    
+    try {
+      // Set loading state for this specific comment
+      setRewardLoading(prev => ({ ...prev, [comment.comment_id]: true }));
+      
+      // Get commenter's wallet address
+      const { data: commenterData, error: commenterError } = await supabase
+        .from('users')
+        .select('wallet_address')
+        .eq('user_id', comment.user_id)
+        .single();
+        
+      if (commenterError || !commenterData?.wallet_address) {
+        throw new Error('Commenter wallet address not found');
+      }
+      
+      const response = await fetch('/api/reward', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          postId,
+          commenterAddress: commenterData.wallet_address,
+          userId: comment.user_id
+        }),
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.message || 'Failed to send reward');
+      }
+      
+      toast.success('Reward sent successfully!');
+      
+    } catch (error) {
+      console.error('Error sending reward:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to send reward');
+    } finally {
+      setRewardLoading(prev => ({ ...prev, [comment.comment_id]: false }));
+    }
+  };
+
+  const handleLikeToggle = async () => {
+    if (!userId || !postId || likeLoading) return;
+    
+    try {
+      setLikeLoading(true);
+      
+      const action = hasLiked ? 'unlike' : 'like';
+      
+      const response = await fetch('/api/like', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          postId,
+          userId,
+          action
+        }),
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.message || `Failed to ${action} post`);
+      }
+      
+      // Update local state
+      setHasLiked(!hasLiked);
+      setLikesCount(result.likesCount);
+      
+      // Show success toast
+      toast.success(result.message);
+      
+    } catch (error) {
+      console.error('Error toggling like:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to process like action');
+    } finally {
+      setLikeLoading(false);
+    }
+  };
+
   if (loading) return <div className="min-h-screen bg-[#0b0b0b] text-white flex items-center justify-center">Loading...</div>;
   if (!post) return <div className="min-h-screen bg-[#0b0b0b] text-red-500 flex items-center justify-center">Post not found</div>;
 
@@ -169,6 +290,23 @@ export default function PostPage() {
             </div>
             <h1 className="text-2xl font-extrabold">{post.title}</h1>
             <p className="whitespace-pre-line text-gray-300">{post.content}</p>
+            
+            {/* Like section */}
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                type="button"
+                className={`flex items-center gap-1 text-sm ${hasLiked ? 'text-red-500' : 'text-gray-400'} hover:text-red-500 transition-colors`}
+                onClick={handleLikeToggle}
+                disabled={likeLoading || !userId}
+              >
+                {hasLiked ? (
+                  <FaHeart className="w-5 h-5" />
+                ) : (
+                  <FaRegHeart className="w-5 h-5" />
+                )}
+                <span>{likesCount} {likesCount === 1 ? 'Like' : 'Likes'}</span>
+              </button>
+            </div>
           </div>
 
           <div className="mt-10 mb-32">
@@ -185,10 +323,13 @@ export default function PostPage() {
                   <div className="text-white text-base">{comment.content}</div>
                   {isAuthor && (
                     <button
+                      type="button"
                       className="absolute right-4 top-4 opacity-0 group-hover:opacity-100 bg-indigo-600 hover:bg-indigo-500 transition text-white px-3 py-1 text-sm rounded-full flex items-center gap-2"
-                      onClick={() => alert('Reward coming soon!')}
+                      onClick={() => handleRewardComment(comment)}
+                      disabled={rewardLoading[comment.comment_id]}
                     >
-                      <FaDollarSign className="text-xs" /> Reward
+                      <FaDollarSign className="text-xs" />
+                      {rewardLoading[comment.comment_id] ? 'Sending...' : 'Reward'}
                     </button>
                   )}
                 </div>
@@ -209,6 +350,7 @@ export default function PostPage() {
               onChange={(e) => setCommentText(e.target.value)}
             />
             <button
+              type="button"
               className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-lg"
               disabled={!commentText.trim() || commentLoading}
               onClick={handleAddComment}
@@ -245,6 +387,7 @@ export default function PostPage() {
               />
             </div>
             <button
+              type="button"
               className="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"
               onClick={() => {
                 setShowQRCode(false);

@@ -13,11 +13,6 @@
         "internalType": "uint256"
       },
       {
-        "name": "_attestationId",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
         "name": "_olderThanEnabled",
         "type": "bool",
         "internalType": "bool"
@@ -26,21 +21,6 @@
         "name": "_olderThan",
         "type": "uint256",
         "internalType": "uint256"
-      },
-      {
-        "name": "_forbiddenCountriesEnabled",
-        "type": "bool",
-        "internalType": "bool"
-      },
-      {
-        "name": "_forbiddenCountriesListPacked",
-        "type": "uint256[4]",
-        "internalType": "uint256[4]"
-      },
-      {
-        "name": "_ofacEnabled",
-        "type": "bool[3]",
-        "internalType": "bool[3]"
       },
       {
         "name": "_relayer",
@@ -329,6 +309,41 @@
         "name": "age",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "verifySelfProof",
+    "inputs": [
+      {
+        "name": "proof",
+        "type": "tuple",
+        "internalType": "struct IVcAndDiscloseCircuitVerifier.VcAndDiscloseProof",
+        "components": [
+          {
+            "name": "a",
+            "type": "uint256[2]",
+            "internalType": "uint256[2]"
+          },
+          {
+            "name": "b",
+            "type": "uint256[2][2]",
+            "internalType": "uint256[2][2]"
+          },
+          {
+            "name": "c",
+            "type": "uint256[2]",
+            "internalType": "uint256[2]"
+          },
+          {
+            "name": "pubSignals",
+            "type": "uint256[21]",
+            "internalType": "uint256[21]"
+          }
+        ]
       }
     ],
     "outputs": [],
