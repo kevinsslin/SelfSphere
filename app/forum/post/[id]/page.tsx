@@ -215,7 +215,7 @@ export default function PostPage() {
                 selfApp={new SelfAppBuilder({
                   appName: 'SelfSphere',
                   scope: 'self-sphere-comment',
-                  endpoint: 'https://your-endpoint/api/verify-comment',
+                  endpoint: 'https://self-sphere.vercel.app/api/verify-comment',
                   logoBase64: logo,
                   userId: commentId,
                   disclosures: {

@@ -104,8 +104,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             
             const configuredVerifier = new SelfBackendVerifier(
                 "self-sphere-post",
-                "https://6317-111-235-226-130.ngrok-free.app",
-                //"https://self-sphere.vercel.app",
+                //"https://6317-111-235-226-130.ngrok-free.app",
+                "https://self-sphere.vercel.app",
                 "uuid",
                 true // This is to enable the mock passport
             );
@@ -208,7 +208,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                             }
                         };
 
-                        const restrictions = pendingPost.commentRestrictions || defaultRestrictions;
+                        const restrictions = pendingPost.allowed_commenters || defaultRestrictions;
                         
                         const olderThanEnabled = restrictions.enabled[RESTRICTIONS.AGE];
                         const olderThan = restrictions.minimumAge || 0;
@@ -227,6 +227,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                             pendingPost.token_symbol || "",
                             gender,
                             nationality
+                        );
+
+                        console.log(
+                            "gender", gender,
+                            "nationality", nationality
                         );
                         
                         // Wait for transaction to be mined
